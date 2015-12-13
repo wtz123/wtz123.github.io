@@ -1,0 +1,578 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>树状数组 | Tony&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Tony">
+    
+
+    
+    <meta name="description" content="1. 概述树状数组(BIT ,binary indexed tree)是一种查询和修改的时间复杂度都为log(n)的数据结构。传统的数组连续元素求和的时间复杂度为O(n),而树状数组通过将线性结构转换成伪树状结构，将复杂度降为log(n)。
+2. 树状数组的结构给定数组A,我们定义数组C，满足C[i]=A[i-2^k+1]+…+A[i],其中k为i转成二进制后末尾的0的个数，i从1开始计算，则我们">
+<meta property="og:type" content="article">
+<meta property="og:title" content="树状数组">
+<meta property="og:url" content="http://wangtianzhi.cn/2014/02/19/binary-indexed-tree/index.html">
+<meta property="og:site_name" content="Tony's blog">
+<meta property="og:description" content="1. 概述树状数组(BIT ,binary indexed tree)是一种查询和修改的时间复杂度都为log(n)的数据结构。传统的数组连续元素求和的时间复杂度为O(n),而树状数组通过将线性结构转换成伪树状结构，将复杂度降为log(n)。
+2. 树状数组的结构给定数组A,我们定义数组C，满足C[i]=A[i-2^k+1]+…+A[i],其中k为i转成二进制后末尾的0的个数，i从1开始计算，则我们">
+<meta property="og:image" content="/img/binary indexed tree.jpg">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="树状数组">
+<meta name="twitter:description" content="1. 概述树状数组(BIT ,binary indexed tree)是一种查询和修改的时间复杂度都为log(n)的数据结构。传统的数组连续元素求和的时间复杂度为O(n),而树状数组通过将线性结构转换成伪树状结构，将复杂度降为log(n)。
+2. 树状数组的结构给定数组A,我们定义数组C，满足C[i]=A[i-2^k+1]+…+A[i],其中k为i转成二进制后末尾的0的个数，i从1开始计算，则我们">
+
+    
+    <link rel="alternative" href="/atom.xml" title="Tony&#39;s blog" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/myfavicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/myjacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/myjacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/mylogo.png" alt="Tony&#39;s blog" title="Tony&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Tony&#39;s blog">Tony&#39;s blog</a></h1>
+				<h2 class="blog-motto">Talk is cheap, show me the code.</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:wangtianzhi.cn">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2014/02/19/binary-indexed-tree/" title="树状数组" itemprop="url">树状数组</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="Tony" target="_blank" itemprop="author">Tony</a>
+		
+  <p class="article-time">
+    <time datetime="2014-02-19T07:54:53.000Z" itemprop="datePublished"> 发表于 2014-02-19</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-_概述"><span class="toc-number">1.</span> <span class="toc-text">1. 概述</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-_树状数组的结构"><span class="toc-number">2.</span> <span class="toc-text">2. 树状数组的结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-_代码实现"><span class="toc-number">3.</span> <span class="toc-text">3. 代码实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-_参考资料"><span class="toc-number">4.</span> <span class="toc-text">4. 参考资料</span></a></li></ol>
+		
+		</div>
+		
+		<h3 id="1-_概述"><strong>1. 概述</strong></h3><p>树状数组(BIT ,binary indexed tree)是一种查询和修改的时间复杂度都为log(n)的数据结构。传统的数组连续元素求和的时间复杂度为O(n),而树状数组通过将线性结构转换成伪树状结构，将复杂度降为log(n)。</p>
+<h3 id="2-_树状数组的结构"><strong>2. 树状数组的结构</strong></h3><p>给定数组A,我们定义数组C，满足C[i]=A[i-2^k+1]+…+A[i],其中k为i转成二进制后末尾的0的个数，i从1开始计算，则我们称C为树状数组。其中2^k = i&amp;(i^(i-1)),即i与i-1做异或运算再与i做与运算。</p>
+<a id="more"></a>
+<p>数组C的具体含义如下图所示：</p>
+<p><img src="/img/binary indexed tree.jpg" alt=""></p>
+<p>C[1]=A[1];<br>C[2]=A[1]+A[2];<br>C[3]=A[3];<br>C[4]=A[1]+A[2]+A[3]+A[4];<br>…<br>C[7]=A[7];<br>C[8]=A[1]+…+A[8];<br>分析上面的几组式子可知，当i为奇数时，C[i]=A[i] ；当i为偶数时，就要看i的因子中最多有二的多少次幂。例如，6的因子中有2的一次幂，等于2，所以C[6]=A[5]+A[6]（由六向前数两个数的和），4的因子中有2的两次幂，等于4，所以C[4]=A[1]+A[2]+A[3]+A[4]（由四向前数四个数的和） 。当我们修改A[i]的值时，只需要沿着C[i]往跟结点上溯，修改这条路上的所有结点即可，这种操作最坏情况下的时间复杂度为树的高度即log(n)，比线性结构的数组的复杂度O(n)快。</p>
+<h3 id="3-_代码实现"><strong>3. 代码实现</strong></h3><figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//求2^k</span></span><br><span class="line"><span class="keyword">int</span> lowbit(<span class="keyword">int</span> t)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">return</span> t &amp; ( t ^ ( t - <span class="number">1</span> ) );</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//求前n项和</span></span><br><span class="line"><span class="comment">//求出来 2^k 之后，数组C的值就都出来了</span></span><br><span class="line"><span class="keyword">int</span> <span class="keyword">sum</span>(<span class="keyword">int</span> n)</span><br><span class="line">&#123;</span><br><span class="line">   <span class="keyword">int</span> <span class="keyword">sum</span> = <span class="number">0</span>;</span><br><span class="line">   <span class="keyword">while</span>(n &gt; <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">	 <span class="keyword">sum</span> += C[n];</span><br><span class="line">	 n -= lowbit(n);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">sum</span>;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment">//给某个节点pos加上num</span></span><br><span class="line"><span class="keyword">void</span> plus(<span class="keyword">int</span> pos, <span class="keyword">int</span> num)</span><br><span class="line">&#123;</span><br><span class="line">   <span class="keyword">while</span>(pos &lt;= n)</span><br><span class="line">  &#123;</span><br><span class="line">	 C[pos] += num;</span><br><span class="line">	 pos += lowbit(pos);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="4-_参考资料"><strong>4. 参考资料</strong></h3><p>[1]. <a href="http://hawstein.com/posts/binary-indexed-trees.html" target="_blank" rel="external">http://hawstein.com/posts/binary-indexed-trees.html</a><br>[2]. <a href="http://dongxicheng.org/structure/binary_indexed_tree/" target="_blank" rel="external">http://dongxicheng.org/structure/binary_indexed_tree/</a><br>[3]. <a href="http://www.cnblogs.com/zhangshu/archive/2011/08/16/2141396.html" target="_blank" rel="external">http://www.cnblogs.com/zhangshu/archive/2011/08/16/2141396.html</a></p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/数据结构/">数据结构</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/数据结构/">数据结构</a><a href="/tags/算法/">算法</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://wangtianzhi.cn/2014/02/19/binary-indexed-tree/" data-title="树状数组 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2015/08/29/webservice-rest/" title="webservice之REST">
+  <strong>上一篇：</strong><br/>
+  <span>
+  webservice之REST</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2014/02/03/the-strategy-pattern/"  title="设计模式之策略模式">
+ <strong>下一篇：</strong><br/> 
+ <span>设计模式之策略模式
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2014/02/19/binary-indexed-tree/" data-title="树状数组" data-url="http://wangtianzhi.cn/2014/02/19/binary-indexed-tree/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-_概述"><span class="toc-number">1.</span> <span class="toc-text">1. 概述</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-_树状数组的结构"><span class="toc-number">2.</span> <span class="toc-text">2. 树状数组的结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-_代码实现"><span class="toc-number">3.</span> <span class="toc-text">3. 代码实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-_参考资料"><span class="toc-number">4.</span> <span class="toc-text">4. 参考资料</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/web开发/" title="web开发">web开发<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/博客/" title="博客">博客<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/操作系统/" title="操作系统">操作系统<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据库/" title="数据库">数据库<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/REST/" title="REST">REST<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JAX-RS/" title="JAX-RS">JAX-RS<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/ACID/" title="ACID">ACID<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/策略模式/" title="策略模式">策略模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/strategy/" title="strategy">strategy<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/分区/" title="分区">分区<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/grub/" title="grub">grub<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/算法/" title="算法">算法<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/事务/" title="事务">事务<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jersey/" title="jersey">jersey<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/light/" title="light">light<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/个人博客/" title="个人博客">个人博客<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/编码/" title="编码">编码<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/中文乱码/" title="中文乱码">中文乱码<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/启动项/" title="启动项">启动项<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://panpei.net.cn" target="_blank" title="培神的个人网站">crAzyli0n&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jiajixin.cn" target="_blank" title="贾大神的网站">Jason&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://wuchong.me" target="_blank" title="Jark&#39;s Blog">Jark&#39;s Blog</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p>  <br/>
+			当你的才华还撑不起你的野心时，你就应该静下心来学习。</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/wtz123" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/wtz123" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="Tony">Tony</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"wtz123"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-62752575-1', 'auto');  
+ga('send', 'pageview');
+</script>
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F6af02e94d74ff35930f2cdd4a4206185' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

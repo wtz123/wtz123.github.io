@@ -1,0 +1,528 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title><![CDATA[Tony's blog]]></title>
+  <subtitle><![CDATA[Talk is cheap, show me the code.]]></subtitle>
+  <link href="/atom.xml" rel="self"/>
+  <link href="http://wangtianzhi.cn/"/>
+  <updated>2015-12-13T13:55:22.000Z</updated>
+  <id>http://wangtianzhi.cn/</id>
+  
+  <author>
+    <name><![CDATA[Tony]]></name>
+    
+  </author>
+  
+  <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title><![CDATA[字符编码和中文乱码分析]]></title>
+    <link href="http://wangtianzhi.cn/2015/12/13/character-and-chinese-error-code/"/>
+    <id>http://wangtianzhi.cn/2015/12/13/character-and-chinese-error-code/</id>
+    <published>2015-12-13T01:14:33.000Z</published>
+    <updated>2015-12-13T13:55:22.000Z</updated>
+    <content type="html"><![CDATA[<h4 id="一-_编码类型">一. 编码类型</h4><p><strong>1. ASCII</strong><br>ASCII（American Standard Code for Information Interchange，美国标准信息交换代码）,是基于拉丁字母的一套电脑编码系统，主要用于显示现代英语和其他西欧语言。标准ASCII 码也叫基础ASCII码，使用7 位二进制数来表示所有的大写和小写字母，数字0 到9、标点符号，以及在美式英语中使用的特殊控制字符。其最高位(b7)用作奇偶校验位，后128个称为扩展ASCII码。许多基于x86的系统都支持使用扩展（或“高”）ASCII。扩展ASCII 码允许将每个字符的第8位用于确定附加的128个特殊符号字符、外来语字母和图形符号。<br><strong>2. ISO-8859-1</strong><br>ISO-8859-1编码是单字节编码，<strong>向下兼容ASCII</strong>，其编码范围是0x00-0xFF，0x00-0x7F之间完全和ASCII一致，0x80-0x9F之间是控制字符，0xA0-0xFF之间是文字符号。<br><strong>3. GB2312</strong><br>全称《信息交换用汉字编码字符集·基本集》，是双字节编码。GB 2312的出现，基本满足了汉字的计算机处理需要，它所收录的汉字已经覆盖中国大陆99.75%的使用频率。对于人名、古汉语等方面出现的罕用字，GB 2312不能处理，这导致了后来GBK及GB 18030汉字字符集的出现。<br><strong>4. GBK</strong><br>GBK全称《汉字内码扩展规范》，它的出现是为了扩展 GB2312，加入更多的汉字,包括繁体字。它的编码是和 GB2312 兼容的。<br>注意：gbk和gb2312的中文都是两个字节，英文（半角的）一个字节。<br><strong>5. GB18030</strong><br>是我国的强制标准，它可能是单字节、双字节或者四字节编码，它的编码与 GB2312 编码兼容，这个虽然是国家标准，但是实际应用系统中使用的并不广泛。</p>
+<p><strong>unicode</strong><br>虽然通过使用不同字符集，我们可以在一台机器上查阅不同语言的文档，但是我们仍然无法解决一个问题：在一份文档中显示所有字符。为了解决这个问题，我们需要一个全人类达成共识的巨大的字符集，这就是Unicode字符集。它为每种语言中的每个字符设定了统一并且唯一的二进制编码，以满足跨语言、跨平台进行文本转换、处理的要求。<br>虽然每个字符在Unicode字符集中都能找到唯一确定的编号（字符码，又称Unicode码），但是决定最终字节流的却是具体的字符编码,如utf-16或utf-8。例如同样是对Unicode字符“A”进行编码，UTF-8字符编码得到的字节流是0x41，而UTF-16（大端模式）得到的是0x00 0x41。<br><strong>6. UTF-16</strong><br>UTF-16 是 Unicode 字符在计算机中存取方法的一种具体编码。UTF-16支持Unicode全字符集的编解码，采用了变长编码，最少使用2个字节，如果要编码BMP以外的字符，则需要4个字节结对。当然，一般用BMP字符就够了，因此在网上很多都写utf-16是两个字节。<br><strong>7. UTF-8</strong><br>UTF-8应该是目前应用最广泛的一种Unicode编码方案。由于UCS-2/UTF-16对于ASCII字符使用两个字节进行编码，存储和处理效率相对低下，并且由于ASCII字符经过UTF-16编码后得到的两个字节，高字节始终是0x00，很多C语言的函数都将此字节视为字符串末尾从而导致无法正确解析文本。<br>对于ASCII字符的编码使用单字节，和ASCII编码一摸一样，这样所有原先使用ASCII编解码的文档就可以直接转到UTF-8编码了。对于其他字符，则使用2-4个字节来表示，其中，首字节前置1的数目代表正确解析所需要的字节数。</p>
+<p>UTF-16 与 UTF-8 都是处理 Unicode 编码，它们的编码规则不太相同，相对来说 UTF-16 编码效率最高，字符到字节相互转换更简单，进行字符串操作也更好。它适合在本地磁盘和内存之间使用，可以进行字符和字节之间快速切换，如 Java 的内存编码就是采用 UTF-16 编码。但是它不适合在网络之间传输，因为网络传输容易损坏字节流，一旦字节流损坏将很难恢复，相比较而言 UTF-8 更适合网络传输，对 ASCII 字符采用单字节存储，另外单个字符损坏也不会影响后面其它字符，在编码效率上介于 GBK 和 UTF-16 之间，所以 UTF-8 在编码效率上和编码安全性上做了平衡，是理想的中文编码方式。</p>
+<h4 id="二-_java中的编码">二. java中的编码</h4><p>在JVM内，从class文件加载的源码全部以UNICODE编码。在内存中倒腾String等数据是编码无关的，但是程序本身难免牵涉到外部文件的读写（如xml，properties文件等）、与数据库的交互、网络数据流读写等。这样就会造成很多非unicode编码的字符存在于JVM中，这也就是乱码出现的根本原因所在。</p>
+<p>在使用IDE进行开发时，比如ECLIPSE,IDEA等，可以指定源文件（.java）的编码格式，此处的编码格式是指Java文件自身的编码。而xml、jsp、html等文件是能够自身描述文件编码的。xml可以通过encoding来指定编码方式，而html通过content-type方式来指定，如果打开这些文件，就会调用相应的编码方式来处理。但是经过javac命令编译后，生成的.class文件毫无疑问都是Unicode编码。<br>jvm在各个阶段都编码方式如下图所示：<br><img src="/img/jvm-encode.png" alt="jvm编码方式"><br>在存储java源文件时，是按照java文件的编码对文件进行编码，然后存储在磁盘中。当要对java源文件进行编译时，用源文件的编码对其进行解码，编译生成的class文件为unicode的编码方式。最终jvm加载class文件执行到jvm中，在jvm中的编码方式也是unicode。</p>
+<p>在java中，主要用以下两个方法来对String进行编解码：</p>
+<ul>
+<li>getBytes(String charset)<br>将字符串按照指定的charset编码，返回其字节方式的表示。具体来说，实现的是从unicode—&gt;charset的转变。</li>
+<li>new String(byte[] bytes,String charset)<br>将字节数组按照charset进行识别，最终转化为Unicode存储在JVM内，编码是从charset－&gt;unicode的转变。</li>
+</ul>
+<p>例如如下的例子：<br><figure class="highlight processing"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">String</span> a=<span class="string">"中文"</span>;<span class="comment">//当然你可以以unicode的形式写成String a="\u4E2D\u6587"；</span></span><br><span class="line"><span class="built_in">byte</span>[] bs = a.getBytes(<span class="string">"gbk"</span>);</span><br><span class="line"><span class="keyword">String</span> b= <span class="keyword">new</span> <span class="keyword">String</span>(bs,<span class="string">"iso-8859-1"</span>);<span class="comment">//如果这里使用gbk编码进行解码的话，会自然的得到原来的a。</span></span><br></pre></td></tr></table></figure></p>
+<p>可以看出这个时候已经为乱码了，不过由于没有信息丢失，所以还是可以恢复成中文的。<br>恢复的过程为 <code>String c = new String(b.getBytes(&quot;iso-8859-1&quot;),&quot;gbk&quot;)</code>;<br>这种方式中间多了两次编解码，不推荐使用。</p>
+<h4 id="三-_web编码">三. web编码</h4><p>用户从浏览器端发起一个 HTTP 请求，需要存在编码的地方是 URL、Cookie、Parameter。服务器端接受到 HTTP 请求后要解析 HTTP 协议，其中 URI、Cookie 和 POST 表单参数需要解码，服务器端可能还需要读取数据库中的数据，本地或网络中其它地方的文本文件，这些数据都可能存在编码问题，当 Servlet 处理完所有请求的数据后，需要将这些数据再编码通过 Socket 发送到用户请求的浏览器里，再经过浏览器解码成为文本。这些过程如下图所示：<br><img src="/img/url_encode_process.png" alt="该图来自参考文献3的文章"></p>
+<p><strong>1. request编码</strong><br>URL的几个组成部分如下图所示：<br><img src="/img/url_construct.gif" alt="该图来自参考文献3的文章"></p>
+<p>上图中以 Tomcat 作为 Servlet Engine 为例，它们分别对应到下面这些配置文件中：<br>Port 对应在 Tomcat 的 <code>&lt;Connector port=&quot;8080&quot;/&gt;</code> 中配置，而 Context Path 在 <code>&lt;Context path=&quot;/examples&quot;/&gt;</code> 中配置，Servlet Path 在 Web 应用的 web.xml 中的。注意这里是在浏览器里直接输入 URL 所以是通过 Get 方法请求的，如果是 POST 方法请求的话，QueryString 将通过表单方式提交到服务器端。<br><strong>a.URI</strong><br>一般来说，URL只能使用英文字母、阿拉伯数字和某些标点符号，不能使用其他文字和符号,这是因为网络标准<a href="http://www.ietf.org/rfc/rfc1738.txt" target="_blank" rel="external">RFC 1738</a>做了硬性规定:</p>
+<blockquote>
+<p>“只有字母和数字[0-9a-zA-Z]、一些特殊符号”$-_.+!*’(),”[不包括双引号]、以及某些保留字，才可以不经过编码直接用于URL。”</p>
+</blockquote>
+<p>这意味着，如果URL中有汉字，就必须编码后使用。但是麻烦的是，RFC 1738没有规定具体的编码方法，而是交给应用程序（浏览器）自己决定。这导致”URL编码”成为了一个混乱的领域。由于不同浏览器可能采取不同的编码方式，因此url最好不要有中文字符；对于那些用js或模拟浏览器方式请求的（如httpclient），可以将url进行编码再提交，这样就能够得到控制。<br>在java中有<code>URLEncoder.encode(String s,String enc)／URLDecoder.decode(String s,String enc)</code>等方法，在javascript中有<code>escape/unescape</code>,<code>encodeURI/decodeURI</code>,<code>encodeURIComponent/decodeURIComponent</code>等方法。<br><strong>b.POST</strong><br>POST 表单参数传递方式是通过 HTTP 的 BODY 传递到服务端的。当我们在页面上点击 submit 按钮时浏览器首先将根据 ContentType 的 Charset 编码格式对表单填的参数进行编码然后提交到服务器端。</p>
+<p><strong>2. request解码</strong><br>在服务器收到浏览器发来的请求后，需要对一些内容进行解码:<br><strong>a.URI</strong><br>对 URL 的 URI 部分进行解码的字符集是在 connector 的 <code>&lt;Connector URIEncoding=”UTF-8”/&gt;</code> 中定义的，如果没有定义，那么将以默认编码 ISO-8859-1 解析。所以如果有中文 URL 时最好把 URIEncoding 设置成 UTF-8 编码。<br><strong>b.GET</strong><br>GET方式的请求，QueryString 的解码字符集要么是 Header 中 ContentType 中定义的 Charset 要么就是默认的 ISO-8859-1，要使用 ContentType 中定义的编码就要设置 connector 的 <code>&lt;Connector URIEncoding=”UTF-8” useBodyEncodingForURI=”true”/&gt;</code>中的 useBodyEncodingForURI 设置为 true。这个配置项的名字有点让人产生混淆，它并不是对整个 URI 都采用 BodyEncoding 进行解码而仅仅是对 QueryString 使用 BodyEncoding 解码。设置了URIEncoding=“UTF-8”这样也可以。若useBodyEncodingForURI和URIEncoding同时设置了，useBodyEncodingForURI优先级高于URIEncoding。<br><strong>c.POST</strong><br>在服务器端同样也是用 ContentType 中字符集进行解码。所以通过 POST 表单提交的参数一般不会出现问题，而且这个字符集编码是我们自己设置的，可以通过 request.setCharacterEncoding(charset) 来设置。post方式的编码跟useBodyEncodingForURI和URIEncoding没关系。<br><strong>d.header</strong><br>Header中传递的其它参数如 Cookie、redirectPath。对 Header 中的项进行解码也是在调用 request.getHeader 是进行的，如果请求的 Header项没有解码则调用 MessageBytes 的 toString 方法，这个方法将从 byte 到 char 的转化使用的默认编码也是 ISO-8859-1，而我们也不能设置 Header 的其它解码格式，所以如果你设置 Header 中有非 ASCII 字符解码肯定会有乱码。</p>
+<p><strong>3. response编码</strong><br>当用户请求的资源已经成功获取后，这些内容将通过 response 返回给客户端浏览器，这个过程先要经过编码再到浏览器进行解码。这个过程的编解码字符集可以通过 response.setCharacterEncoding 来设置，它将会覆盖 request.getCharacterEncoding 的值，并且通过 Header 的 Content-Type 返回客户端。服务器按照response.setCharacterEncoding—contentType—pageEncoding的优先顺序，对要发送的数据进行编码。</p>
+<p><strong>4. response解码</strong><br>浏览器接受到返回的 socket 流时将通过 Content-Type 的 charset 来解码，如果返回的 HTTP Header 中 Content-Type 没有设置 charset，那么浏览器将根据 Html 的 <code>&lt;meta HTTP-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=GBK&quot; /&gt;</code> 中的 charset 来解码。如果也没有定义的话，那么浏览器将使用默认的编码来解码。</p>
+<p><strong>注意：</strong></p>
+<ol>
+<li>GET 方式 HTTP 请求的 QueryString 与 POST 方式 HTTP 请求的表单参数都是作为 Parameters 保存，都是通过 request.getParameter 获取参数值。对它们的<strong>解码是在 request.getParameter 方法第一次被调用时进行的</strong>。所以<strong>request.setCharacterEncoding 应该设置在request.getParameter之前</strong>。</li>
+<li><p>在java web开发中经常会添加filter来设置字符编码，如下所示：  </p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">filter</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="title">filter-name</span>&gt;</span>encodingFilter<span class="tag">&lt;/<span class="title">filter-name</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="title">filter-class</span>&gt;</span>org.springframework.web.filter.CharacterEncodingFilter<span class="tag">&lt;/<span class="title">filter-class</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="title">init-param</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="title">param-name</span>&gt;</span>encoding<span class="tag">&lt;/<span class="title">param-name</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="title">param-value</span>&gt;</span>UTF-8<span class="tag">&lt;/<span class="title">param-value</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;/<span class="title">init-param</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="title">init-param</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="title">param-name</span>&gt;</span>forceEncoding<span class="tag">&lt;/<span class="title">param-name</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="title">param-value</span>&gt;</span>true<span class="tag">&lt;/<span class="title">param-value</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;/<span class="title">init-param</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="title">filter</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在CharacterEncodingFilter里面，会执行<code>request.setCharacterEncoding(&#39;UTF-8&#39;)</code>的操作。该filter要设置在其他filter之前，否则可能不起作用，因为解码是在 request.getParameter 方法第一次被调用时进行的，如果其他filter通过request获取了参数，那么就解码了，再给request设置编码就不起作用了。</p>
+</li>
+<li>URIEncoding就是针对请求参数get的编码设置的，而filter的<code>request.setCharacterEncoding(&#39;UTF-8&#39;)</code>或者请求header中的content-type中的编码都是针对请求体的,不影响get方式的请求。</li>
+<li>在jsp中<code>&lt;%@page language=&quot;java&quot; contentType=&quot;text/html; charset=utf-8&quot; pageEncoding=&quot;utf-8&quot;%&gt;</code>, pageEncoding和contentType都可以设置JSP源文件和响应正文中的字符集编码，但:<br>设置JSP源文件字符集时,优先级为pageEncoding&gt;contentType。如果都没有设置，默认ISO-8859-1。<br>设置响应输出的字符集时,优先级为contentType&gt;pageEncoding。如果都没有设置，默认ISO-8859-1。</li>
+<li>jsp编译成servlet步骤：<br>第一步将jsp编译成.java：用pageEncoding编码来解码jsp文件，解码成unicode,转成servlet的java文件，用utf-8进行编码存储；<br>第二步用javac将java源码编译成.class文件：用utf-8解码java源码，转成unicode编码的class文件。</li>
+</ol>
+<h4 id="四-_参考文献">四. 参考文献</h4><ol>
+<li><a href="http://www.imkevinyang.com/2010/06/%E5%85%B3%E4%BA%8E%E5%AD%97%E7%AC%A6%E7%BC%96%E7%A0%81%EF%BC%8C%E4%BD%A0%E6%89%80%E9%9C%80%E8%A6%81%E7%9F%A5%E9%81%93%E7%9A%84.html" target="_blank" rel="external">关于字符编码，你所需要知道的（ASCII,Unicode,Utf-8,GB2312…）</a></li>
+<li><a href="http://www.imkevinyang.com/2009/02/%E5%AD%97%E7%AC%A6%E7%BC%96%E8%A7%A3%E7%A0%81%E7%9A%84%E6%95%85%E4%BA%8B%EF%BC%88ascii%EF%BC%8Cansi%EF%BC%8Cunicode%EF%BC%8Cutf-8%E5%8C%BA%E5%88%AB%EF%BC%89.html" target="_blank" rel="external">字符编解码的故事（ASCII，ANSI，Unicode，Utf-8区别）</a></li>
+<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-chinesecoding/" target="_blank" rel="external">深入分析 Java 中的中文编码问题</a></li>
+<li><a href="http://www.ruanyifeng.com/blog/2010/02/url_encoding.html" target="_blank" rel="external">关于url编码</a></li>
+<li><a href="http://lukejin.iteye.com/blog/586088" target="_blank" rel="external">深度剖析java的字符编码</a></li>
+<li><a href="http://www.w3.org/International/questions/qa-byte-order-mark" target="_blank" rel="external">The byte-order mark(BOM) in HTML</a></li>
+</ol>
+]]></content>
+    <summary type="html">
+    <![CDATA[<h4 id="一-_编码类型">一. 编码类型</h4><p><strong>1. ASCII</strong><br>ASCII（American Standard Code for Information Interchange，美国标准信息交换代码）,是基于拉丁字母的一套]]>
+    </summary>
+    
+      <category term="中文乱码" scheme="http://wangtianzhi.cn/tags/%E4%B8%AD%E6%96%87%E4%B9%B1%E7%A0%81/"/>
+    
+      <category term="编码" scheme="http://wangtianzhi.cn/tags/%E7%BC%96%E7%A0%81/"/>
+    
+      <category term="web开发" scheme="http://wangtianzhi.cn/categories/web%E5%BC%80%E5%8F%91/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[系统盘扩容及双系统启动项修复方法]]></title>
+    <link href="http://wangtianzhi.cn/2015/10/08/partition-grub-rescue/"/>
+    <id>http://wangtianzhi.cn/2015/10/08/partition-grub-rescue/</id>
+    <published>2015-10-08T12:38:32.000Z</published>
+    <updated>2015-10-08T15:11:52.000Z</updated>
+    <content type="html"><![CDATA[<p>本人的笔记本电脑是win7+ubuntu14.04双系统，最近win7系统的系统盘快用完了，由于重装系统很麻烦，因此选择优化系统盘。由于平常都将软件装在非系统盘上，系统盘能够腾出空间的并不多，最终选择给系统盘扩容。由于是双系统，系统启动项是通过grub来引导的，在扩容后，系统无法进入开机启动项，在查找了很多资料后，终于恢复系统启动项。虽然以前也经历过这样的事情，但是到需要用到的时候，已经忘了怎么处理，且网上的很多解决方案并不完整，因此通过本文记录下这些问题的解决方案，方便日后再遇到时查阅。</p>
+<p>首先，给系统盘扩容是采用<a href="http://www.partition-tool.com/download.htm" target="_blank" rel="external">EaseUS Partition Master</a>工具，免费版本的就足够了。打开软件，可以看到如下磁盘的分区信息：<br><img src="/img/partition master mainframe.png" alt=""><br>若要扩大C盘的大小，需要先从与C盘临近的盘释放一些空间出来，然后再将这些空间合并到C盘。具体步骤如下：</p>
+<ol>
+<li>选中与C盘临近的E盘（一般是D盘，不过本人的系统以前编号被改动过），右键选择’resize/move partition’，拖动滑块，调整磁盘大小。释放出空间后，再以同样的方法更改C盘的大小，将释放出来的空间增加到C盘：<br><img src="/img/partition resize.png" alt=""><br><img src="/img/partition resize2.png" height="400" width="400">   <img src="/img/partition resize3.png" height="400" width="400"></li>
+<li>回到主界面单击Apply按钮，就可以开始分区。此过程需要重启系统，处理过程较慢。</li>
+</ol>
+<p>其次，由于改变了磁盘的分区，双系统的启动项会出现问题，在启动电脑时，会出现如下的问题：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">error:unknown filesystem   </span><br><span class="line">grub rescue&gt;</span><br></pre></td></tr></table></figure></p>
+<p>具体解决方式如下：</p>
+<ol>
+<li><p>查看分区</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grub rescue&gt;ls</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>寻找Ubuntu所在分区</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grub rescue&gt;ls (hd0,msdos1)</span><br></pre></td></tr></table></figure>
+<p>如果是unknown filesystem继续试下一个分区，直到找到Ubuntu所在分区，我的是在(hd0,msdos6)</p>
+</li>
+<li><p>修改启动分区：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grub rescue&gt;set root=(hd0,msdos6)</span><br><span class="line">grub rescue&gt;set prefix=(hd0,msdos6)/boot/grub  (这里的格式可能会随grub的版本不同而不同)</span><br><span class="line">grub rescue&gt;insmod normal</span><br><span class="line">grub rescue&gt;set (用来查看配置信息)</span><br></pre></td></tr></table></figure>
+<p>其中可以用set命令来查看配置信息。到这里如果一切正常，继续，否则说明Ubuntu所在分区不正确，先找好再继续。</p>
+</li>
+<li><p>进入启动菜单：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grub rescue&gt;normal</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>进入启动菜单后，立马按C进入命令行模式（如果直接进入系统，那么下次启动系统的时候启动项还是没有修复）：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">grub&gt;set root=(hd0,msdos6)</span><br><span class="line">grub&gt;set prefix=(hd0,msdos6)/boot/grub</span><br><span class="line">grub&gt;linux /vmlinuz  root=/dev/sda6（可按Tab键自动补全/vmlinuz）</span><br><span class="line">grub&gt;initrd /initrd.img (可按Tab键自动补全/initrd*)</span><br><span class="line">grub&gt;boot</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>进入Ubuntu修复grub:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo update-grub</span><br><span class="line">sudo grub-install /dev/sda (重建grub到第一个硬盘,此处是sda而不是sda6，若报错可以加--force参数执行）</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>重启，完成。</p>
+</li>
+</ol>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>本人的笔记本电脑是win7+ubuntu14.04双系统，最近win7系统的系统盘快用完了，由于重装系统很麻烦，因此选择优化系统盘。由于平常都将软件装在非系统盘上，系统盘能够腾出空间的并不多，最终选择给系统盘扩容。由于是双系统，系统启动项是通过grub来引导的，在扩容后，系]]>
+    </summary>
+    
+      <category term="grub" scheme="http://wangtianzhi.cn/tags/grub/"/>
+    
+      <category term="分区" scheme="http://wangtianzhi.cn/tags/%E5%88%86%E5%8C%BA/"/>
+    
+      <category term="启动项" scheme="http://wangtianzhi.cn/tags/%E5%90%AF%E5%8A%A8%E9%A1%B9/"/>
+    
+      <category term="操作系统" scheme="http://wangtianzhi.cn/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[数据库事务隔离级别]]></title>
+    <link href="http://wangtianzhi.cn/2015/09/27/transaction/"/>
+    <id>http://wangtianzhi.cn/2015/09/27/transaction/</id>
+    <published>2015-09-27T06:40:49.000Z</published>
+    <updated>2015-09-27T14:54:38.000Z</updated>
+    <content type="html"><![CDATA[<p>事务是一系列操作组成的工作单元，该工作单元内的操作是不可分割的，即要么所有操作都做，要么所有操作都不做，这就是事务。</p>
+<h3 id="ACID特性">ACID特性</h3><p>事务必需满足ACID（原子性、一致性、隔离性和持久性）特性，缺一不可：</p>
+<ul>
+<li><p><strong>原子性</strong>（Atomicity）：即事务是不可分割的最小工作单元，事务内的操作要么全做，要么全不做。如在银行中A给B转账：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">update account set money= money - <span class="number">100</span> where name=<span class="string">'A'</span>;  </span><br><span class="line">update account set money= money + <span class="number">100</span> where name=<span class="string">'B'</span>;</span><br></pre></td></tr></table></figure>
+<p>上述两条操作要么都执行，要么都不执行，否则会产生纠纷。在数据库管理系统（DBMS）中，默认情况下一条SQL就是一个单独事务，事务是自动提交的。只有显式的使用start transaction开启一个事务，才能将一个代码块放在事务中执行。保障事务的原子性是数据库管理系统的责任，为此许多数据源采用日志机制。</p>
+</li>
+<li><strong>一致性</strong>（Consistency）：在事务执行前数据库的数据处于正确的状态，而事务执行完成后数据库的数据还是处于正确的状态，即数据完整性约束没有被破坏；如银行转帐，不管有没有转账成功，应该保证事务结束后A+B的存款总额不变。保障一致性的方法可以从数据库层面和业务层面两方面入手。数据库层面的一致性是，在一个事务执行之前和之后，数据会符合你设置的约束（唯一约束，外键约束,Check约束等)和触发器设置。业务一致性需要由开发人员进行保证。</li>
+<li><strong>隔离性</strong>（Isolation）：并发事务执行之间无影响，在一个事务内部的操作对其他事务是不产生影响，这需要事务隔离级别来指定隔离性。企业开发中，事务最复杂问题都是由事务隔离性引起的。一般情况下，完全的隔离性是不现实的，完全的隔离性要求数据库同一时间只执行一条事务，这样会严重影响性能。</li>
+<li><strong>持久性</strong>（Durability）：事务一旦执行成功，它对数据库的数据的改变必须是永久的，不会因比如遇到系统故障或断电造成数据不一致或丢失。</li>
+</ul>
+<h3 id="事务常见问题">事务常见问题</h3><p>在实际项目开发中数据库操作一般都是并发执行的，即有多个事务并发执行，并发执行就可能遇到问题，目前常见的问题如下：</p>
+<ul>
+<li><strong>丢失更新</strong>：两个事务同时更新一行数据，最后一个事务的更新会覆盖掉第一个事务的更新，从而导致第一个事务更新的数据丢失，这是由于没有加锁造成的。</li>
+<li><strong>脏读</strong>：脏读发生在一个事务读取了另一个事务改写但尚未提交的数据时。如果改写在稍后被回滚了，那么第一个事务获取的数据就是无效的。</li>
+<li><strong>不可重复读</strong>：不可重复读发生在一个事务执行相同的查询两次或两次以上，但是每次都得到不同的数据时。这通常是因为另一个并发事务在两次查询期间更新了数据。</li>
+<li><strong>幻读</strong>：幻读与不可重复读类似。它发生在一个事务（T1）读取了几行数据，接着另一个并发事务（T2）插入了一些数据时。在随后的查询中，第一个事务（T1）就会发现多了一些原本不存在的记录。</li>
+</ul>
+<h3 id="事务隔离级别">事务隔离级别</h3><p>为了解决这些并发问题，需要通过数据库隔离级别来解决，在标准SQL规范中定义了四种隔离级别：</p>
+<ul>
+<li><strong>未提交读</strong>（Read Uncommitted）：最低隔离级别，一个事务能读取到别的事务未提交的更新数据，很不安全，可能出现丢失更新、脏读、不可重复读、幻读；</li>
+<li><strong>提交读</strong>（Read Committed）：一个事务能读取到别的事务提交的更新数据，不能看到未提交的更新数据，不可能出现丢失更新、脏读，但可能出现不可重复读、幻读;</li>
+<li><strong>可重复读</strong>（Repeatable Read）：保证同一事务中先后执行的多次查询将返回同一结果，不受其他事务影响，不可能出现丢失更新、脏读、不可重复读，但可能出现幻读；</li>
+<li><strong>序列化</strong>（Serializable）：最高隔离级别，不允许事务并发执行，而必须串行化执行，最安全，不可能出现更新、脏读、不可重复读、幻读。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">隔离级别</th>
+<th style="text-align:center">丢失更新</th>
+<th style="text-align:center">脏读</th>
+<th style="text-align:center">不可重复读</th>
+<th style="text-align:center">幻读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"> 未提交读</td>
+<td style="text-align:center">是</td>
+<td style="text-align:center">是</td>
+<td style="text-align:center">是</td>
+<td style="text-align:center">是</td>
+</tr>
+<tr>
+<td style="text-align:center">  提交读</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">是</td>
+<td style="text-align:center">是</td>
+</tr>
+<tr>
+<td style="text-align:center"> 可重复读</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">是</td>
+</tr>
+<tr>
+<td style="text-align:center">  序列化</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+</tr>
+</tbody>
+</table>
+<p>隔离级别越高，数据库事务并发执行性能越差，能处理的操作越少。因此在实际项目开发中为了考虑并发性能一般使用提交读隔离级别，它能避免丢失更新和脏读，尽管不可重复读和幻读不能避免，但可以在可能出现的场合使用悲观锁或乐观锁来解决这些问题。sqlserver和oracle的默认隔离级别都是提交读，而mysql的innodb引擎的默认隔离级别为可重复读，且mysql通过一些机制来达到可重复读也能够避免幻读的情况。</p>
+<p>本文只是介绍了事务的基本理论，后面等学完了相关的知识后，再专门介绍mysql的事务隔离级别的实现方法，以及spring锁的底层实现机制。</p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>事务是一系列操作组成的工作单元，该工作单元内的操作是不可分割的，即要么所有操作都做，要么所有操作都不做，这就是事务。</p>
+<h3 id="ACID特性">ACID特性</h3><p>事务必需满足ACID（原子性、一致性、隔离性和持久性）特性，缺一不可：</p>
+<ul>]]>
+    </summary>
+    
+      <category term="ACID" scheme="http://wangtianzhi.cn/tags/ACID/"/>
+    
+      <category term="事务" scheme="http://wangtianzhi.cn/tags/%E4%BA%8B%E5%8A%A1/"/>
+    
+      <category term="数据库" scheme="http://wangtianzhi.cn/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[使用JAX-RS构建web服务]]></title>
+    <link href="http://wangtianzhi.cn/2015/08/29/jax-rs-example/"/>
+    <id>http://wangtianzhi.cn/2015/08/29/jax-rs-example/</id>
+    <published>2015-08-29T15:16:23.000Z</published>
+    <updated>2015-09-27T03:15:48.000Z</updated>
+    <content type="html"><![CDATA[<p>前面介绍了REST和JAX-RS的基本概念，本文将以jersey为例，举例说明rest的实际使用方法。</p>
+<p>Jersey 是 JAX-RS 的参考实现，Jersey1是JAX-RS的参考实现，Jersey2是JAX-RS2的参考实现。Jersey包含三个主要部分。</p>
+<ul>
+<li>核心服务器（Core Server）：通过提供 JSR 311 中标准化的注释和 API 标准化，您可以用直观的方式开发 RESTful Web 服务。</li>
+<li>核心客户端（Core Client）：Jersey 客户端 API 帮助您与 REST 服务轻松通信。</li>
+<li>集成（Integration）：Jersey 还提供可以轻松集成 Spring、Guice、Apache Abdera 的库。</li>
+</ul>
+<p><strong>基于jersey开发rest的流程如下：</strong></p>
+<ol>
+<li>引入jersey的jar包，<a href="https://jersey.java.net/" target="_blank" rel="external">https://jersey.java.net/</a></li>
+<li><p>通过注解的方式定义rest service类，核心的部分如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">   <span class="annotation">@Path</span>(<span class="string">"/library"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LibraryServiceImpl</span> <span class="keyword">implements</span> <span class="title">LibraryService</span> </span>&#123;</span><br><span class="line">	<span class="annotation">@GET</span></span><br><span class="line">	<span class="annotation">@Path</span>(<span class="string">"books"</span>)</span><br><span class="line">	<span class="annotation">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">getBooks</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="string">"books"</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="annotation">@Override</span></span><br><span class="line">	<span class="annotation">@GET</span></span><br><span class="line">	<span class="annotation">@Path</span>(<span class="string">"/book/&#123;isbn&#125;"</span>)</span><br><span class="line">	<span class="annotation">@Produces</span>(MediaType.APPLICATION_JSON)</span><br><span class="line">	<span class="function"><span class="keyword">public</span> Book <span class="title">getBook</span><span class="params">(@PathParam(<span class="string">"isbn"</span>)</span> ISBN id) </span>&#123;<span class="comment">//ISBN需要带一个String参数的构造方法</span></span><br><span class="line">		Book book = <span class="keyword">new</span> Book();</span><br><span class="line">		book.setId(id);</span><br><span class="line">		book.setName(<span class="string">"java book"</span>);</span><br><span class="line">		<span class="keyword">return</span> book;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	<span class="annotation">@Override</span></span><br><span class="line">	<span class="annotation">@POST</span></span><br><span class="line">	<span class="annotation">@Path</span>(<span class="string">"/book"</span>)</span><br><span class="line">	<span class="function"><span class="keyword">public</span> Response <span class="title">addBook</span><span class="params">(Book book)</span> </span>&#123;<span class="comment">//实体参数</span></span><br><span class="line">		System.out.println(<span class="string">"name:"</span> + book.getName());</span><br><span class="line">		System.out.println(<span class="string">"id:"</span> + book.getId().getIsbn());</span><br><span class="line">		<span class="keyword">return</span> Response.ok().build();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="annotation">@DELETE</span></span><br><span class="line">	<span class="annotation">@Path</span>(<span class="string">"/book"</span>)</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeBook</span><span class="params">(@QueryParam(<span class="string">"id"</span>)</span> String id) </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"remove id:"</span> + id);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在上述rest service中，可以通过GET方式访问project-path/library/books获取图书馆的所有书籍，以GET方式访问project-path/library/book/123获取ISBN的id为123的书的信息，其中请求头中的Accept类型需包含application/json类型的，url中的123将作为isbn的值，getBook(ISBN id)的参数值即为isbn的值。  </p>
+<p>在上述实例中，各个资源的URI命名都是名词，且通过请求方式来进行区分请求的资源，如addBook(Book book)和remobeBook(String id)方法虽然请求的URI相同，但是一个是POST一个是DELETE方式，这样就能通过请求方法来简单的辨别出rest service的功能。此外，上述的Book实体需要在类上添加<code>@XmlRootElement</code>，ISBN作为参数需要带有一个String类型的构造函数或者一个包含接收单个字符串参数的valueOf静态方法。</p>
+</li>
+<li><p>添加web.xml配置  </p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">web-app</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="title">servlet</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="title">servlet-name</span>&gt;</span>JerseyFirstServlet<span class="tag">&lt;/<span class="title">servlet-name</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="title">servlet-class</span>&gt;</span>com.sun.jersey.spi.container.servlet.ServletContainer<span class="tag">&lt;/<span class="title">servlet-class</span>&gt;</span></span><br><span class="line">	<span class="comment">&lt;!-- &lt;init-param&gt;</span><br><span class="line">		设置REST资源所在的包(可选)</span><br><span class="line">		&lt;param-name&gt;com.sun.jersey.config.property.packages&lt;/param-name&gt;</span><br><span class="line">		&lt;param-value&gt;com.tony.jersey.service&lt;/param-value&gt;</span><br><span class="line">	&lt;/init-param&gt; --&gt;</span></span><br><span class="line">	<span class="comment">&lt;!--</span><br><span class="line">	&lt;init-param&gt;</span><br><span class="line">		&lt;param-name&gt;javax.ws.rs.Application&lt;/param-name&gt;</span><br><span class="line">		&lt;param-value&gt;com.tony.jersey.service.MyApplication&lt;/param-value&gt;</span><br><span class="line">	&lt;/init-param&gt; --&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="title">servlet</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="title">servlet-mapping</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="title">servlet-name</span>&gt;</span>JerseyFirstServlet<span class="tag">&lt;/<span class="title">servlet-name</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="title">url-pattern</span>&gt;</span>/*<span class="tag">&lt;/<span class="title">url-pattern</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="title">servlet-mapping</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="title">web-app</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>添加rest的servlet，url-pattern可以添加前缀，如果配置成<url-pattern>service/*</url-pattern>，那么上述的getBooks()方法的URL将变为…/service/library/books。还可以设置REST资源所在的包，这样只有这些包能够被当做rest service。<br>此外，还有其他的配置方法，如自定义Application类，用来注册service和provider，这样能够更灵活的控制service。通过这种方式实现的，需要在web.xml中添加<code>javax.ws.rs.Application</code>参数的配置，或者在自定义的Application类中添加<code>@ApplicationPath</code>注解。用注解方式来实现就可以不用web.xml配置了。</p>
+</li>
+<li>客户端调用rest service<br>jersey提供了客户端API，可以方便的调用service。当然，在JAX-RS2中，也提供了客户端的API。通过jersey的客户端API调用方式如下：<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Client c = Client.create();</span><br><span class="line">WebResource r = c.resource(<span class="string">"http://localhost:8080/rest-jersey-demo/library..."</span>);</span><br><span class="line">ClientResponse response = r.get(ClientResponse.class);</span><br><span class="line"><span class="keyword">int</span> status = response.getStatus();</span><br><span class="line">String entity = response.getEntity(String.class);</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>当然，jersey还可以和spring集成，要和spring集成，只需要添加一个jersey-spring的包，并修改web.xml中配置的servlet类为<code>com.sun.jersey.spi.spring.container.servlet.SpringServlet</code>，很简单吧。</p>
+<p>jersey2的包名和jersey1不一样，且jersey2提供了jax-rs2的实现，有异步调用、过滤器拦截器等功能，本文不详细介绍，下文将给出一个实例的地址，写的实例托管在bitbucket中，bitbucket也是国外的，不过在国内访问速度相对于github速度快些，且bitbucket还提供免费的私有仓库（无仓库个数限制，一个仓库最大容量1G，最大协作人数5人）。</p>
+<p>最后，给出本实例的代码地址：</p>
+<ol>
+<li>jersey1的一个实例：<a href="https://bitbucket.org/tony404/rest-resteasy-demo" target="_blank" rel="external">https://bitbucket.org/tony404/rest-resteasy-demo</a></li>
+<li>jersey2的一个实例：<a href="https://bitbucket.org/tony404/rest-jersey2-demo" target="_blank" rel="external">https://bitbucket.org/tony404/rest-jersey2-demo</a></li>
+<li>jersey与spring的整合：<a href="https://bitbucket.org/tony404/rest-jersey-spring-demo" target="_blank" rel="external">https://bitbucket.org/tony404/rest-jersey-spring-demo</a></li>
+<li>resteasy的一个简单实例：<a href="https://bitbucket.org/tony404/rest-resteasy-demo" target="_blank" rel="external">https://bitbucket.org/tony404/rest-resteasy-demo</a></li>
+</ol>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>前面介绍了REST和JAX-RS的基本概念，本文将以jersey为例，举例说明rest的实际使用方法。</p>
+<p>Jersey 是 JAX-RS 的参考实现，Jersey1是JAX-RS的参考实现，Jersey2是JAX-RS2的参考实现。Jersey包含三个主要部分。]]>
+    </summary>
+    
+      <category term="JAX-RS" scheme="http://wangtianzhi.cn/tags/JAX-RS/"/>
+    
+      <category term="jersey" scheme="http://wangtianzhi.cn/tags/jersey/"/>
+    
+      <category term="webservice" scheme="http://wangtianzhi.cn/tags/webservice/"/>
+    
+      <category term="webservice" scheme="http://wangtianzhi.cn/categories/webservice/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[JAX-RS初探]]></title>
+    <link href="http://wangtianzhi.cn/2015/08/29/REST-JAX-RS/"/>
+    <id>http://wangtianzhi.cn/2015/08/29/REST-JAX-RS/</id>
+    <published>2015-08-29T13:07:25.000Z</published>
+    <updated>2015-09-27T03:16:08.000Z</updated>
+    <content type="html"><![CDATA[<h1 id="JAX-RS概述">JAX-RS概述</h1><p>JAX-RS(Java API for RESTful Web Service，JSR-311)是Java提供用于开发RESTful Web服务基于注解(annotation)的API，在Java EE 6中发布，旨在定义一个统一的规范，使得Java程序员可以使用一套固定的接口来开发REST应用，避免了依赖第三方框架，同时JAX-RS使用POJO编程模型和基于注解的配置并集成JAXB，从而有效缩短了REST应用的开发周期，JSR-311开始于2007年2月，至今发布了两个最终版本1.0，1.1。Java EE7已经发布并且包含了最新的JAX-RS 2.0版本，它是Marek Potociar和Santiago Pericas-Geertsen领导的JSR-339实现。JAX-RS2.0主要的新特性包括：客户端API、异步、HATEOAS（超媒体）、注解、校验、过滤器和处理器（Handler）、内容协商。</p>
+<p>JAX-RS定义的包结构如下，包含近五十多个接口，注解和抽象类:  </p>
+<ul>
+<li><strong>javax.ws.rs</strong>：包含用于创建RESTful服务资源的高层次（High-level）接口和注解；</li>
+<li><strong>javax.ws.rs.core</strong>：包含用于创建RESTful服务资源的低层次（Low-level）接口和注解；</li>
+<li><strong>javax.ws.rs.ext</strong>：包含用于扩展JAX-RS API支持类型的APIs；</li>
+</ul>
+<h1 id="JAX-RS主要接口/类介绍">JAX-RS主要接口/类介绍</h1><p>JAX-RS提供了一些标注将一个资源类，一个POJO Java类，封装为Web资源。标注包括：  </p>
+<ul>
+<li><strong>@Path</strong>，标注资源类或方法的相对路径。</li>
+<li><strong>@GET，@PUT，@POST，@DELETE</strong>，标注方法使用的HTTP请求的类型；@GET获取资源，@PUT更新资源，具有幂等性（一次PUT操作和多次PUT操作的结果一样，都是资源被更新成新的内容），@POST添加资源，@DELETE删除资源；</li>
+<li><strong>@Produces</strong>，标注返回的MIME媒体类型；</li>
+<li><strong>@Consumes</strong>，标注可接受请求的MIME媒体类型；</li>
+<li><strong>@PathParam，@QueryParam，@HeaderParam，@CookieParam，@MatrixParam，@FormParam</strong>分别标注方法的参数来自于HTTP请求的不同位置:<ul>
+<li><strong>@PathParam</strong>来自于URL的路径；用于将 @Path 中的模板变量映射到方法参数，模板变量支持使用正则表达式，变量名与正则表达式之间用分号分隔</li>
+<li><strong>@QueryParam</strong>来自于URL的查询参数；</li>
+<li><strong>@HeaderParam</strong>来自于HTTP请求的头信息；</li>
+<li><strong>@CookieParam</strong>来自于HTTP请求的Cookie；</li>
+<li><strong>@MatrixParam</strong>来自于URI matrix参数值；</li>
+<li><strong>@FormParam</strong>来自于form表单参数。</li>
+</ul>
+</li>
+<li><strong>@Encoded</strong>，用于指明不自动URI解码参数值；</li>
+<li><strong>@DefaultValue</strong>，用于为参数提供一个默认值；</li>
+<li><strong>@Context</strong>，注入上下文对象；</li>
+<li><strong>@HttpMethod</strong>，通过@HttpMethod可以自定义请求方法指示器；</li>
+<li><strong>@Provider</strong>，用来声明provider类。</li>
+</ul>
+<h2 id="资源类&amp;资源方法">资源类&amp;资源方法</h2><p>Web 资源作为一个资源类来实现，对资源的请求由资源类的方法来处理。资源类或资源方法被打上了 Path 标注，Path 标注的值是一个相对的 URI 路径，用于对资源进行定位，路径中可以包含任意的正则表达式以匹配资源。和大多数 JAX-RS 标注一样，Path 标注是可继承的，子类或实现类可以继承超类或接口中的 Path 标注。<br>资源类是POJO，使用JAX-RS标注来实现相应的Web资源。资源类分为根资源类和子资源类，区别在于子资源类没有打在类上的Path 标注，根资源是由JAX-RS运行时实例化，子资源是由应用本身实例化。资源类的实例方法打上了 Path 标注，则为资源方法或子资源定位器，区别在于子资源定位器上没有任何 @GET、@POST、@PUT、@DELETE 或者自定义的 @HttpMethod。<br>如下例中，对widgets/offers的GET请求直接被WidgetsResource资源类的资源方法getDiscounted处理，而对widgets/xxx的GET请求则被WidgetResource资源类的getDetail方法处理<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Path</span>(“widgets”)  </span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WidgetsResource</span> </span>&#123;  </span><br><span class="line"><span class="annotation">@GET</span>  </span><br><span class="line"><span class="annotation">@Path</span>(“offers”)  </span><br><span class="line"><span class="function"><span class="keyword">public</span> WidgetList <span class="title">getDiscounted</span><span class="params">()</span> </span>&#123;…&#125;  </span><br><span class="line"><span class="annotation">@Path</span>(“&#123;id&#125;”)  </span><br><span class="line"><span class="function"><span class="keyword">public</span> WidgetResource <span class="title">findWidget</span><span class="params">(@PathParam(“id”)</span> String id) </span>&#123;  </span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> WidgetResource(id);  </span><br><span class="line">&#125;  </span><br><span class="line">&#125;  </span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WidgetResource</span> </span>&#123;  </span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">WidgetResouce</span><span class="params">(String id)</span> </span>&#123;…&#125;  </span><br><span class="line"><span class="annotation">@GET</span>  </span><br><span class="line"><span class="function"><span class="keyword">public</span> Widget <span class="title">getDetails</span><span class="params">()</span> </span>&#123;…&#125;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="参数标注">参数标注</h2><p>JAX-RS 中涉及的资源方法参数的标注包括：@PathParam、@MatrixParam、@QueryParam、@FormParam、@HeaderParam、@CookieParam、@DefaultValue 和 @Encoded。<br>未被标注的参数（称为实体参数）用于映射请求的实体部分；实体部分与Java类型之间的转换是由实体Provider提供。JAX-RS 规定资源方法中只允许有一个参数没有打上任何的参数标注。<br>只有public方法才能作为资源方法。</p>
+<h2 id="参数和返回值类型">参数和返回值类型</h2><p><strong>资源方法合法的参数类型包括：</strong></p>
+<ul>
+<li>原生类型</li>
+<li>构造函数接收单个字符串参数或者包含接收单个字符串参数的静态方法 valueOf 的任意类型；</li>
+<li>List<t>，Set<t>，SortedSet<t>（T 为以上的 2 种类型）；</t></t></t></li>
+<li>用于映射请求体的实体参数。</li>
+</ul>
+<p><strong>资源方法合法的返回值类型包括：</strong></p>
+<ul>
+<li>void：状态码 204 和空响应体</li>
+<li>Response：Response 的 status 属性指定了状态码，entity 属性映射为响应体</li>
+<li>GenericEntity：GenericEntity 的 entity 属性映射为响应体，entity 属性为空则状态码为 204，非空则状态码为 200</li>
+<li>其它类型：返回的对象实例映射为响应体，实例为空则状态码为 204，非空则状态码为 200。  </li>
+</ul>
+<p>对于错误处理，资源方法可以抛出非受控异常 WebApplicationException 或者返回包含了适当的错误码集合的 Response 对象。</p>
+<h2 id="Provider">Provider</h2><p>JAX-RS运行时通过应用提供的Provider类进行扩展；Provider是一个被@Provider标注并实现了一个或多个JAX-RS接口的类。实体Provider用于在请求/响应实体与Java类型之间进行映射，有两种：MessageBodyReader（请求实体映射到Java类型）和MessageBodyWriter（Java类型映射到响应实体）。默认一个JAX-RS应用中每个Provider只有一个实例。</p>
+<p><strong>MessageBodyReader接口</strong>定义了JAX-RS运行时与那些提供了将实体映射到Java类型功能的组件之间的关系，一个提供该功能的类需要实现MessageBodyReader接口并被@Provider标注。</p>
+<p><strong>JAX-RS实现处理请求实体到Java方法参数映射的逻辑步骤如下：</strong></p>
+<ul>
+<li>取得请求的媒体类型，如果请求中没有包含Content-Type请求头则使用application/octet-stream；</li>
+<li>确定参数的Java类型，该类型能映射处理请求实体；</li>
+<li>取得能支持请求媒体类型的MessageBodyReader Provider类集合；</li>
+<li>遍历MessageBodyReader类集合，调用isReadable方法选择支持期望的Java类型的Provider类；</li>
+<li>如果在第4步中确定了一个合适的MessageBodyReader类则调用readFrom方法将请求实体映射为期望的Java类型对象；</li>
+<li>否则通过JavaBeans Activation Framework查找一个合适的数据处理器将请求实体映射为期望的Java类型；</li>
+<li>否则生成WebApplicationException，包含一个不支持媒体类型的响应（415）和空实体；</li>
+</ul>
+<p><strong>MessageBodyWriter接口</strong>定义了JAX-RS运行时与那些提供了将Java类型映射到实体功能的组件之间的关系，一个提供该功能的类需要实现MessageBodyWriter接口并被@Provider标注。</p>
+<p><strong>JAX-RS实现处理Java返回类型到响应实体的逻辑步骤如下：</strong></p>
+<ul>
+<li>取得将被映射为响应体的对象，如果返回类型是Response或其子类，则取entity属性的值，其他类型则取返回对象的值；</li>
+<li>确定响应实体的媒体类型；</li>
+<li>取得能支持响应媒体类型的MessageBodyWriter Provider类集合；</li>
+<li>对类型的相近度对MessageBodyWriter进行排序；</li>
+<li>遍历MessageBodyWriter类集合，调用isWriteable方法选择支持将Java对象映射为响应实体的Provider类；</li>
+<li>如果在第4步中确定了一个合适的MessageBodyWriter类则调用writeTo方法将Java对象映射为响应实体；</li>
+<li>否则通过JavaBeans Activation Framework查找一个合适的数据处理器将Java对象映射为响应实体；</li>
+<li>否则生成WebApplicationException，包含一个服务器内部错误响应（500）和空包体；</li>
+</ul>
+<p>JAX-RS规范只是定义API，真正开发RESTful Web服务需要引入具体实现，具体实现由第三方提供，目前主要的实现有：</p>
+<ul>
+<li><strong>CXF</strong>——XFire和Celtix的合并（一个由IONA赞助的开源ESB，最初寄存在ObjectWeb上）。</li>
+<li><strong>Jersey</strong>——Sun公司的JAX-RS参考实现。</li>
+<li><strong>RESTEasy</strong>——JBoss的JAX-RS项目。</li>
+<li><strong>Restlet</strong>——也许是最早的REST框架了，它JAX-RS之前就有了。</li>
+</ul>
+<h1 id="JAX-RS2-0新特性">JAX-RS2.0新特性</h1><p>在JavaEE7中包含了JAX-RS2.0,在JAX-RS2.0中包含了JAX-RS1的语法，同时新增了一些新的特性：</p>
+<ol>
+<li><p>客户端API<br>JAX-RS 1.0是一个严格的服务端API。有一些实现提供了不同程度的客户端支持。JAX-RS 2.0添加了“生成器（builder）”工具用于从客户端调用Web服务。以下为一个样例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Get instance of Client</span></span><br><span class="line">Client client = ClientBuilder.newClient();</span><br><span class="line">String bal = client.target(<span class="string">"http://.../atm/&#123;cardId&#125;/balance"</span>)</span><br><span class="line">    .resolveTemplate(<span class="string">"cardId"</span>, <span class="string">"111122223333"</span>)</span><br><span class="line">    .queryParam(<span class="string">"pin"</span>, <span class="string">"9876"</span>) </span><br><span class="line">    .request(<span class="string">"text/plain"</span>).get(String.class);</span><br><span class="line">Invocation invocation1 = client.target(<span class="string">"http://.../atm/&#123;cardId&#125;/balance"</span>)…</span><br><span class="line">.request(“text/plain”).buildGet();</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>异步处理<br>在JAX-RS 1.0中，发起调用的客户端必须等待服务端的响应。2.0引入了异步的支持。这样的话就允许客户端发起一个RESTful的请求，并得到一个Future或an InvocationCallback，当响应完成的时候会获得通知。</p>
+</li>
+<li>HATEOAS（超媒体）<br>HATEOAS（Hypermedia as the Engine of Application State，超媒体作为应用程序状态引擎）需要RESTful的生产者和消费者在每次调用时返回一组达成共识的链接，它用于导航到下一个步骤。如果你将REST视为Web页面的应用版本，那么HATEOAS可以视为Web页面中的链接。<br>JAX-RS 2.0提供了Link和Target类，它们用于服务器端在响应中引入超链接并在客户端对其进行响应。</li>
+<li>过滤器和处理器<br>Filter API允许将servlet的过滤器放到一个链中，遵循责任链模式。如果要引入一些正交的关注点，如日志，那么它会很有用。任何的过滤器都可以继续或终止这个链，这是通过分别调用FilterAction.NEXT和FilterAction.STOP做到的。</li>
+<li><p>内容协商<br>更为丰富的参数注解@Accepts和@Produces能够让你优先安排请求/响应的格式。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Path(<span class="string">"widgets2"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WidgetsResource2</span> </span>&#123;</span><br><span class="line">    <span class="annotation">@GET</span></span><br><span class="line">    <span class="annotation">@Produces</span>(<span class="string">"text/plain; qs=0.5"</span>, <span class="string">"text/html; qs=0.75"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Widgets <span class="title">getWidget</span><span class="params">()</span> </span>&#123;...&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//客户端发起下面的请求</span></span><br><span class="line">GET http:<span class="comment">//.../widgets2</span></span><br><span class="line">Accept: text<span class="comment">/*; q=1</span></span><br></pre></td></tr></table></figure>
+<p>针对上述的请求，因为”text/plain”和”text/html”都匹配，但是”text/html”的因子比较高，因此会返回”text/html”类型的。</p>
+</li>
+<li>许多微小的 API 改进和扩展<br>如Bean 验证、请求 / 响应、URI 生成器、字符串转换器等等。</li>
+<li>DI 集成、Java EE 安全性、MVC、延迟的高级客户端API</li>
+</ol>
+<p>下一篇将以jersey为例，举例说明JAX-RS的具体使用方法。</p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<h1 id="JAX-RS概述">JAX-RS概述</h1><p>JAX-RS(Java API for RESTful Web Service，JSR-311)是Java提供用于开发RESTful Web服务基于注解(annotation)的API，在Java EE 6中发布]]>
+    </summary>
+    
+      <category term="JAX-RS" scheme="http://wangtianzhi.cn/tags/JAX-RS/"/>
+    
+      <category term="REST" scheme="http://wangtianzhi.cn/tags/REST/"/>
+    
+      <category term="webservice" scheme="http://wangtianzhi.cn/tags/webservice/"/>
+    
+      <category term="webservice" scheme="http://wangtianzhi.cn/categories/webservice/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[webservice之REST]]></title>
+    <link href="http://wangtianzhi.cn/2015/08/29/webservice-rest/"/>
+    <id>http://wangtianzhi.cn/2015/08/29/webservice-rest/</id>
+    <published>2015-08-29T08:59:11.000Z</published>
+    <updated>2015-09-27T03:16:24.000Z</updated>
+    <content type="html"><![CDATA[<h1 id="概述">概述</h1><p>REST 是英文 Representational State Transfer 的缩写，有中文翻译为“具象状态传输”。REST 这个术语是由 Roy Fielding 在他的博士论文 《 Architectural Styles and the Design of Network-based Software Architectures 》中提出的。REST 并非标准，而是一种开发 Web 应用的架构风格，可以将其理解为一种设计模式。REST 基于 HTTP，URI，以及 XML 这些现有的广泛流行的协议和标准，伴随着 REST，HTTP 协议得到了更加正确的使用。</p>
+<p>相较于基于 SOAP 和 WSDL 的 Web 服务，REST 模式提供了更为简洁的实现方案。目前，越来越多的 Web 服务开始采用 REST 风格设计和实现，真实世界中比较著名的 REST 服务包括：Google AJAX 搜索 API、Amazon Simple Storage Service (Amazon S3)等。REST 指的是一组架构约束条件和原则。满足这些约束条件和原则的应用程序或设计就是 RESTful。 </p>
+<h2 id="基于_REST_的_Web_服务遵循一些基本的设计原则：">基于 REST 的 Web 服务遵循一些基本的设计原则：</h2><ul>
+<li>网络上的所有事物都被抽象为资源；</li>
+<li>系统中的每一个对象或是资源都可以通过一个唯一的 URI 来进行寻址，URI 的结构应该简单、可预测且易于理解，比如定义目录结构式的 URI；</li>
+<li>以遵循 RFC-2616 所定义的协议的方式显式地使用 HTTP 方法，建立创建、检索、更新和删除（CRUD：Create, Retrieve, Update and Delete）操作与 HTTP 方法之间的一对一映射：  <ul>
+<li>若要在服务器上创建资源，应该使用 POST 方法；  </li>
+<li>若要检索某个资源，应该使用 GET 方法；</li>
+<li>若要更改资源状态或对其进行更新，应该使用 PUT 方法；</li>
+<li>若要删除某个资源，应该使用 DELETE 方法。</li>
+</ul>
+</li>
+<li>URI 所访问的每个资源都可以使用不同的形式加以表示（比如 XML 或者 JSON），具体的表现形式取决于访问资源的客户端，客户端与服务提供者使用一种内容协商的机制（请求头与 MIME 类型）来选择合适的数据格式，最小化彼此之间的数据耦合。</li>
+<li>无状态通讯；服务器端不能保持除了单次请求之外的，任何与其通信的客户端的通信状态。无状态约束使服务器的变化对客户端是不可见的，因为在两次连续的请求中，客户端并不依赖于同一台服务器。</li>
+</ul>
+<h2 id="REST架构与SOAP_WebService比较：">REST架构与SOAP WebService比较：</h2><ul>
+<li>成熟度<br>SOAP目前成熟，不同平台，开发语言之间通过SOAP来交互的web service都能够较好的互通。REST相对不太成熟，由于没有类似于SOAP的权威性协议作为规范，REST实现的各种服务风格不一，通用性不强。</li>
+<li>效率和易用性<br>SOAP使用门槛高（学习成本高，开发难度大），由于SOAP由于各种需求不断扩充其本身协议的内容，在大并发下性能有所下降。REST 目前大量的Web 2.0网站使用，高效以及简洁易用，例如很多大型网站开放的REST风格的API都会有多种返回形式，除了传统的xml作为数据承载，还有（JSON,RSS,ATOM）等形式，这对很多网站前端开发人员来说就能够很好的mashup各种资源信息。这种高效一方面源于其面向资源接口设计以及操作抽象简化了开发者的不良设计，同时也最大限度的利用了Http最初的应用协议设计理念。REST 是一种轻量级的Web Service架构风格，其实现和操作明显比SOAP和XML-RPC更为简洁，可以完全通过HTTP协议实现，还可以利用缓存Cache来提高响应速度，性能、效率和易用性上都优于SOAP协议。同时由于通讯本身的无状态性可以让不同的服务器的处理一系列请求中的不同请求，提高服务器的扩展性。</li>
+<li>安全性<br>SOAP在安全方面是通过使用XML-Security和XML-Signature两个规范组成了WS-Security来实现安全控制的，当前已经得到了各个厂商的支持，.net ，php ，java 都已经对其有了很好的支持。REST没有任何规范对于安全方面作说明。因此在考虑安全性上，SOAP要高于REST。</li>
+</ul>
+<p>总的来说，REST对于资源型服务接口来说很合适，同时特别适合对于效率要求很高，但是对于安全要求不高的场景。而SOAP的成熟性可以给需要提供给多开发语言的，对于安全性要求较高的接口设计带来便利。</p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<h1 id="概述">概述</h1><p>REST 是英文 Representational State Transfer 的缩写，有中文翻译为“具象状态传输”。REST 这个术语是由 Roy Fielding 在他的博士论文 《 Architectural Styles an]]>
+    </summary>
+    
+      <category term="REST" scheme="http://wangtianzhi.cn/tags/REST/"/>
+    
+      <category term="webservice" scheme="http://wangtianzhi.cn/tags/webservice/"/>
+    
+      <category term="webservice" scheme="http://wangtianzhi.cn/categories/webservice/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[树状数组]]></title>
+    <link href="http://wangtianzhi.cn/2014/02/19/binary-indexed-tree/"/>
+    <id>http://wangtianzhi.cn/2014/02/19/binary-indexed-tree/</id>
+    <published>2014-02-19T07:54:53.000Z</published>
+    <updated>2015-08-29T12:06:24.000Z</updated>
+    <content type="html"><![CDATA[<h3 id="1-_概述"><strong>1. 概述</strong></h3><p>树状数组(BIT ,binary indexed tree)是一种查询和修改的时间复杂度都为log(n)的数据结构。传统的数组连续元素求和的时间复杂度为O(n),而树状数组通过将线性结构转换成伪树状结构，将复杂度降为log(n)。</p>
+<h3 id="2-_树状数组的结构"><strong>2. 树状数组的结构</strong></h3><p>给定数组A,我们定义数组C，满足C[i]=A[i-2^k+1]+…+A[i],其中k为i转成二进制后末尾的0的个数，i从1开始计算，则我们称C为树状数组。其中2^k = i&amp;(i^(i-1)),即i与i-1做异或运算再与i做与运算。</p>
+<a id="more"></a>
+<p>数组C的具体含义如下图所示：</p>
+<p><img src="/img/binary indexed tree.jpg" alt=""></p>
+<p>C[1]=A[1];<br>C[2]=A[1]+A[2];<br>C[3]=A[3];<br>C[4]=A[1]+A[2]+A[3]+A[4];<br>…<br>C[7]=A[7];<br>C[8]=A[1]+…+A[8];<br>分析上面的几组式子可知，当i为奇数时，C[i]=A[i] ；当i为偶数时，就要看i的因子中最多有二的多少次幂。例如，6的因子中有2的一次幂，等于2，所以C[6]=A[5]+A[6]（由六向前数两个数的和），4的因子中有2的两次幂，等于4，所以C[4]=A[1]+A[2]+A[3]+A[4]（由四向前数四个数的和） 。当我们修改A[i]的值时，只需要沿着C[i]往跟结点上溯，修改这条路上的所有结点即可，这种操作最坏情况下的时间复杂度为树的高度即log(n)，比线性结构的数组的复杂度O(n)快。</p>
+<h3 id="3-_代码实现"><strong>3. 代码实现</strong></h3><figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//求2^k</span></span><br><span class="line"><span class="keyword">int</span> lowbit(<span class="keyword">int</span> t)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">return</span> t &amp; ( t ^ ( t - <span class="number">1</span> ) );</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//求前n项和</span></span><br><span class="line"><span class="comment">//求出来 2^k 之后，数组C的值就都出来了</span></span><br><span class="line"><span class="keyword">int</span> <span class="keyword">sum</span>(<span class="keyword">int</span> n)</span><br><span class="line">&#123;</span><br><span class="line">   <span class="keyword">int</span> <span class="keyword">sum</span> = <span class="number">0</span>;</span><br><span class="line">   <span class="keyword">while</span>(n &gt; <span class="number">0</span>)</span><br><span class="line">  &#123;</span><br><span class="line">	 <span class="keyword">sum</span> += C[n];</span><br><span class="line">	 n -= lowbit(n);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">sum</span>;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment">//给某个节点pos加上num</span></span><br><span class="line"><span class="keyword">void</span> plus(<span class="keyword">int</span> pos, <span class="keyword">int</span> num)</span><br><span class="line">&#123;</span><br><span class="line">   <span class="keyword">while</span>(pos &lt;= n)</span><br><span class="line">  &#123;</span><br><span class="line">	 C[pos] += num;</span><br><span class="line">	 pos += lowbit(pos);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="4-_参考资料"><strong>4. 参考资料</strong></h3><p>[1]. <a href="http://hawstein.com/posts/binary-indexed-trees.html" target="_blank" rel="external">http://hawstein.com/posts/binary-indexed-trees.html</a><br>[2]. <a href="http://dongxicheng.org/structure/binary_indexed_tree/" target="_blank" rel="external">http://dongxicheng.org/structure/binary_indexed_tree/</a><br>[3]. <a href="http://www.cnblogs.com/zhangshu/archive/2011/08/16/2141396.html" target="_blank" rel="external">http://www.cnblogs.com/zhangshu/archive/2011/08/16/2141396.html</a></p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<h3 id="1-_概述"><strong>1. 概述</strong></h3><p>树状数组(BIT ,binary indexed tree)是一种查询和修改的时间复杂度都为log(n)的数据结构。传统的数组连续元素求和的时间复杂度为O(n),而树状数组通过将线性结构转换成伪树状结构，将复杂度降为log(n)。</p>
+<h3 id="2-_树状数组的结构"><strong>2. 树状数组的结构</strong></h3><p>给定数组A,我们定义数组C，满足C[i]=A[i-2^k+1]+…+A[i],其中k为i转成二进制后末尾的0的个数，i从1开始计算，则我们称C为树状数组。其中2^k = i&amp;(i^(i-1)),即i与i-1做异或运算再与i做与运算。</p>]]>
+    
+    </summary>
+    
+      <category term="数据结构" scheme="http://wangtianzhi.cn/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/"/>
+    
+      <category term="算法" scheme="http://wangtianzhi.cn/tags/%E7%AE%97%E6%B3%95/"/>
+    
+      <category term="数据结构" scheme="http://wangtianzhi.cn/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[设计模式之策略模式]]></title>
+    <link href="http://wangtianzhi.cn/2014/02/03/the-strategy-pattern/"/>
+    <id>http://wangtianzhi.cn/2014/02/03/the-strategy-pattern/</id>
+    <published>2014-02-03T01:51:07.000Z</published>
+    <updated>2015-08-29T10:17:12.000Z</updated>
+    <content type="html"><![CDATA[<p>寒假带着《head first设计模式》这本厚厚的书准备系统的学习一下设计模式。不同于以往枯燥的讲解知识点，Head first以幽默通俗易懂的形式将知识呈现在读者面前。以前也看过设计模式的其它一些书籍，虽然讲解全面，却不好理解，且一味的讲解知识点容易让人犯困。看了《head first 设计模式》前面一部分，其特有的讲解模式让我印象深刻，容易理解。本文还将OO的设计原则贯穿于设计模式的讲解中，让人更深刻的把握OO设计原则和设计模式的精髓。</p>
+<p>书上观察者模式的定义如下：</p>
+<blockquote>
+<p>策略模式定义了算法族，分别封装起来，让它们之间可以互相替换，此模式让算法的变化独立于使用算法的客户。</p>
+</blockquote>
+<a id="more"></a>
+<p><img src="/img/the strategy pattern.png" alt=""><br>本文引用书上的例子。有各种各样的鸭子，不同的鸭子行为可能不一样，叫声不一样、飞行行为不一样、外观不一样等等。<br>鸭子的主体：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Duck</span> </span>&#123;</span><br><span class="line">	FlyBehavior flyBehavior;</span><br><span class="line">	QuackBehavior quackBehavior;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">Duck</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	&#125;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setFlyBehavior</span> <span class="params">(FlyBehavior fb)</span> </span>&#123;</span><br><span class="line">		flyBehavior = fb;</span><br><span class="line">	&#125;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setQuackBehavior</span><span class="params">(QuackBehavior qb)</span> </span>&#123;</span><br><span class="line">		quackBehavior = qb;</span><br><span class="line">	&#125;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">display</span><span class="params">()</span></span>;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">performFly</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		flyBehavior.fly();</span><br><span class="line">	&#125;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">performQuack</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		quackBehavior.quack();</span><br><span class="line">	&#125;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">swim</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"All ducks float, even decoys!"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>Duck中包含两个实例变量“flyBehavior”与“quackBehavior”，声明为接口类型，每个鸭子对象都会动态的设置这些变量以在运行时引用正确的行为类型（如:FlyWithWings,Quack等）。<br>鸭子行为的接口：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">FlyBehavior</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fly</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">QuackBehavior</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">quack</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>鸭子行为的实现：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FlyWithWings</span> <span class="keyword">implements</span> <span class="title">FlyBehavior</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fly</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"I'm flying!!"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Quack</span> <span class="keyword">implements</span> <span class="title">QuackBehavior</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">quack</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"Quack"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>具体鸭子的实现：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedHeadDuck</span> <span class="keyword">extends</span> <span class="title">Duck</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">RedHeadDuck</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		flyBehavior = <span class="keyword">new</span> FlyWithWings();</span><br><span class="line">		quackBehavior = <span class="keyword">new</span> Quack();</span><br><span class="line">	&#125;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">display</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"I'm a real Red Headed duck"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>测试类：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MiniDuckSimulator</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">		MallardDuck	mallard = <span class="keyword">new</span> MallardDuck();</span><br><span class="line">		RubberDuck	rubberDuckie = <span class="keyword">new</span> RubberDuck();</span><br><span class="line">		DecoyDuck	decoy = <span class="keyword">new</span> DecoyDuck();</span><br><span class="line"> </span><br><span class="line">		ModelDuck	model = <span class="keyword">new</span> ModelDuck();</span><br><span class="line"></span><br><span class="line">		mallard.performQuack();</span><br><span class="line">		rubberDuckie.performQuack();</span><br><span class="line">		decoy.performQuack();</span><br><span class="line">   </span><br><span class="line">		model.performFly();	</span><br><span class="line">		model.setFlyBehavior(<span class="keyword">new</span> FlyRocketPowered());</span><br><span class="line">		model.performFly();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>寒假带着《head first设计模式》这本厚厚的书准备系统的学习一下设计模式。不同于以往枯燥的讲解知识点，Head first以幽默通俗易懂的形式将知识呈现在读者面前。以前也看过设计模式的其它一些书籍，虽然讲解全面，却不好理解，且一味的讲解知识点容易让人犯困。看了《head first 设计模式》前面一部分，其特有的讲解模式让我印象深刻，容易理解。本文还将OO的设计原则贯穿于设计模式的讲解中，让人更深刻的把握OO设计原则和设计模式的精髓。</p>
+<p>书上观察者模式的定义如下：</p>
+<blockquote>
+<p>策略模式定义了算法族，分别封装起来，让它们之间可以互相替换，此模式让算法的变化独立于使用算法的客户。</p>
+</blockquote>]]>
+    
+    </summary>
+    
+      <category term="strategy" scheme="http://wangtianzhi.cn/tags/strategy/"/>
+    
+      <category term="策略模式" scheme="http://wangtianzhi.cn/tags/%E7%AD%96%E7%95%A5%E6%A8%A1%E5%BC%8F/"/>
+    
+      <category term="设计模式" scheme="http://wangtianzhi.cn/tags/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/"/>
+    
+      <category term="设计模式" scheme="http://wangtianzhi.cn/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[开始使用hexo博客]]></title>
+    <link href="http://wangtianzhi.cn/2014/01/27/first-article/"/>
+    <id>http://wangtianzhi.cn/2014/01/27/first-article/</id>
+    <published>2014-01-27T06:17:10.000Z</published>
+    <updated>2015-10-11T01:19:26.000Z</updated>
+    <content type="html"><![CDATA[<p>前两天看到<a href="http://xidianpanpei.github.io/" target="_blank" rel="external">培哥</a>将个人博客改为<a href="https://github.com/hexojs/hexo" target="_blank" rel="external">hexo</a>，看了界面挺简洁的，配置简单，而且hexo用的是node.js，速度较快，遂决定也搭建一个自己的博客。其实很早以前就打算搭建自己的博客了，当初是打算用wordpress搭建自己的博客，后来发现比较麻烦，也没有时间去折腾，把这事耽了很久。恰好寒假在家可以上网，而且相对比较闲，就折腾了一把。</p>
+<p>以前用的是iteye的博客，后来想迁移到博客园，不过在将文章导到博客园时没有成功，就一直用的iteye。原来博客上的很多文章都是转载的（转载的在文章里都有注明出处），也经常没有更新，一方面是由于最近比较忙，都忘了有博客的存在了；另一方面是没有养成写博客的习惯，总觉得麻烦。<br><a id="more"></a></p>
+<p>当然，我深知写博客的好处，特别是作为一名程序猿，保持写博客的习惯是很有必要的。开通此博客，希望能够多写一些自己原创的文章，记录学习过程中的点点滴滴。</p>
+<p>在搭建此博客的过程中也遇到了种种问题，或是请教<a href="http://xidianpanpei.github.io/" target="_blank" rel="external">培哥</a>、<a href="http://littlebean.github.io/" target="_blank" rel="external">XXL</a>，或是找度娘、google。当然，最主要参考的内容是 <a href="http://zipperary.com/categories/hexo/" target="_blank" rel="external">zipperary</a>的博客。在搭建过程中遇到的较大的问题mark如下：</p>
+<ol>
+<li>hexo deploy不成功时，要先删除.deploy。</li>
+<li>hexo2.4.5默认主题为landscape，本博客改为light，从git clone到themes下，官方说要update，update后就不能用了，所以不要update。</li>
+</ol>
+<p>仅以此文mark自己的新博客。</p>
+<p>更新：</p>
+<p>博客主题改为jacman。</p>
+<p>2015.10.11更新：</p>
+<p>原先的博客代码是托管在github上的，最近发现github拦截百度的爬虫，因此百度就无法将博客加入索引。现将博客迁到gitcafe上，gitcafe是国内的平台，速度较快。</p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>前两天看到<a href="http://xidianpanpei.github.io/">培哥</a>将个人博客改为<a href="https://github.com/hexojs/hexo">hexo</a>，看了界面挺简洁的，配置简单，而且hexo用的是node.js，速度较快，遂决定也搭建一个自己的博客。其实很早以前就打算搭建自己的博客了，当初是打算用wordpress搭建自己的博客，后来发现比较麻烦，也没有时间去折腾，把这事耽了很久。恰好寒假在家可以上网，而且相对比较闲，就折腾了一把。</p>
+<p>以前用的是iteye的博客，后来想迁移到博客园，不过在将文章导到博客园时没有成功，就一直用的iteye。原来博客上的很多文章都是转载的（转载的在文章里都有注明出处），也经常没有更新，一方面是由于最近比较忙，都忘了有博客的存在了；另一方面是没有养成写博客的习惯，总觉得麻烦。<br>]]>
+    
+    </summary>
+    
+      <category term="hexo" scheme="http://wangtianzhi.cn/tags/hexo/"/>
+    
+      <category term="light" scheme="http://wangtianzhi.cn/tags/light/"/>
+    
+      <category term="个人博客" scheme="http://wangtianzhi.cn/tags/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2/"/>
+    
+      <category term="博客" scheme="http://wangtianzhi.cn/categories/%E5%8D%9A%E5%AE%A2/"/>
+    
+  </entry>
+  
+</feed>

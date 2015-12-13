@@ -1,0 +1,602 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>系统盘扩容及双系统启动项修复方法 | Tony&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Tony">
+    
+
+    
+    <meta name="description" content="本人的笔记本电脑是win7+ubuntu14.04双系统，最近win7系统的系统盘快用完了，由于重装系统很麻烦，因此选择优化系统盘。由于平常都将软件装在非系统盘上，系统盘能够腾出空间的并不多，最终选择给系统盘扩容。由于是双系统，系统启动项是通过grub来引导的，在扩容后，系统无法进入开机启动项，在查找了很多资料后，终于恢复系统启动项。虽然以前也经历过这样的事情，但是到需要用到的时候，已经忘了怎么处">
+<meta property="og:type" content="article">
+<meta property="og:title" content="系统盘扩容及双系统启动项修复方法">
+<meta property="og:url" content="http://wangtianzhi.cn/2015/10/08/partition-grub-rescue/index.html">
+<meta property="og:site_name" content="Tony's blog">
+<meta property="og:description" content="本人的笔记本电脑是win7+ubuntu14.04双系统，最近win7系统的系统盘快用完了，由于重装系统很麻烦，因此选择优化系统盘。由于平常都将软件装在非系统盘上，系统盘能够腾出空间的并不多，最终选择给系统盘扩容。由于是双系统，系统启动项是通过grub来引导的，在扩容后，系统无法进入开机启动项，在查找了很多资料后，终于恢复系统启动项。虽然以前也经历过这样的事情，但是到需要用到的时候，已经忘了怎么处">
+<meta property="og:image" content="/img/partition master mainframe.png">
+<meta property="og:image" content="/img/partition resize.png">
+<meta property="og:image" content="/img/partition resize2.png">
+<meta property="og:image" content="/img/partition resize3.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="系统盘扩容及双系统启动项修复方法">
+<meta name="twitter:description" content="本人的笔记本电脑是win7+ubuntu14.04双系统，最近win7系统的系统盘快用完了，由于重装系统很麻烦，因此选择优化系统盘。由于平常都将软件装在非系统盘上，系统盘能够腾出空间的并不多，最终选择给系统盘扩容。由于是双系统，系统启动项是通过grub来引导的，在扩容后，系统无法进入开机启动项，在查找了很多资料后，终于恢复系统启动项。虽然以前也经历过这样的事情，但是到需要用到的时候，已经忘了怎么处">
+
+    
+    <link rel="alternative" href="/atom.xml" title="Tony&#39;s blog" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/myfavicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/myjacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/myjacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/mylogo.png" alt="Tony&#39;s blog" title="Tony&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Tony&#39;s blog">Tony&#39;s blog</a></h1>
+				<h2 class="blog-motto">Talk is cheap, show me the code.</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:wangtianzhi.cn">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/10/08/partition-grub-rescue/" title="系统盘扩容及双系统启动项修复方法" itemprop="url">系统盘扩容及双系统启动项修复方法</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="Tony" target="_blank" itemprop="author">Tony</a>
+		
+  <p class="article-time">
+    <time datetime="2015-10-08T12:38:32.000Z" itemprop="datePublished"> 发表于 2015-10-08</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			
+		
+		</div>
+		
+		<p>本人的笔记本电脑是win7+ubuntu14.04双系统，最近win7系统的系统盘快用完了，由于重装系统很麻烦，因此选择优化系统盘。由于平常都将软件装在非系统盘上，系统盘能够腾出空间的并不多，最终选择给系统盘扩容。由于是双系统，系统启动项是通过grub来引导的，在扩容后，系统无法进入开机启动项，在查找了很多资料后，终于恢复系统启动项。虽然以前也经历过这样的事情，但是到需要用到的时候，已经忘了怎么处理，且网上的很多解决方案并不完整，因此通过本文记录下这些问题的解决方案，方便日后再遇到时查阅。</p>
+<p>首先，给系统盘扩容是采用<a href="http://www.partition-tool.com/download.htm" target="_blank" rel="external">EaseUS Partition Master</a>工具，免费版本的就足够了。打开软件，可以看到如下磁盘的分区信息：<br><img src="/img/partition master mainframe.png" alt=""><br>若要扩大C盘的大小，需要先从与C盘临近的盘释放一些空间出来，然后再将这些空间合并到C盘。具体步骤如下：</p>
+<ol>
+<li>选中与C盘临近的E盘（一般是D盘，不过本人的系统以前编号被改动过），右键选择’resize/move partition’，拖动滑块，调整磁盘大小。释放出空间后，再以同样的方法更改C盘的大小，将释放出来的空间增加到C盘：<br><img src="/img/partition resize.png" alt=""><br><img src="/img/partition resize2.png" height="400" width="400">   <img src="/img/partition resize3.png" height="400" width="400"></li>
+<li>回到主界面单击Apply按钮，就可以开始分区。此过程需要重启系统，处理过程较慢。</li>
+</ol>
+<p>其次，由于改变了磁盘的分区，双系统的启动项会出现问题，在启动电脑时，会出现如下的问题：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">error:unknown filesystem   </span><br><span class="line">grub rescue&gt;</span><br></pre></td></tr></table></figure></p>
+<p>具体解决方式如下：</p>
+<ol>
+<li><p>查看分区</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grub rescue&gt;ls</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>寻找Ubuntu所在分区</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grub rescue&gt;ls (hd0,msdos1)</span><br></pre></td></tr></table></figure>
+<p>如果是unknown filesystem继续试下一个分区，直到找到Ubuntu所在分区，我的是在(hd0,msdos6)</p>
+</li>
+<li><p>修改启动分区：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grub rescue&gt;set root=(hd0,msdos6)</span><br><span class="line">grub rescue&gt;set prefix=(hd0,msdos6)/boot/grub  (这里的格式可能会随grub的版本不同而不同)</span><br><span class="line">grub rescue&gt;insmod normal</span><br><span class="line">grub rescue&gt;set (用来查看配置信息)</span><br></pre></td></tr></table></figure>
+<p>其中可以用set命令来查看配置信息。到这里如果一切正常，继续，否则说明Ubuntu所在分区不正确，先找好再继续。</p>
+</li>
+<li><p>进入启动菜单：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grub rescue&gt;normal</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>进入启动菜单后，立马按C进入命令行模式（如果直接进入系统，那么下次启动系统的时候启动项还是没有修复）：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">grub&gt;set root=(hd0,msdos6)</span><br><span class="line">grub&gt;set prefix=(hd0,msdos6)/boot/grub</span><br><span class="line">grub&gt;linux /vmlinuz  root=/dev/sda6（可按Tab键自动补全/vmlinuz）</span><br><span class="line">grub&gt;initrd /initrd.img (可按Tab键自动补全/initrd*)</span><br><span class="line">grub&gt;boot</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>进入Ubuntu修复grub:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo update-grub</span><br><span class="line">sudo grub-install /dev/sda (重建grub到第一个硬盘,此处是sda而不是sda6，若报错可以加--force参数执行）</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>重启，完成。</p>
+</li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/操作系统/">操作系统</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/grub/">grub</a><a href="/tags/分区/">分区</a><a href="/tags/启动项/">启动项</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://wangtianzhi.cn/2015/10/08/partition-grub-rescue/" data-title="系统盘扩容及双系统启动项修复方法 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2015/12/13/character-and-chinese-error-code/" title="字符编码和中文乱码分析">
+  <strong>上一篇：</strong><br/>
+  <span>
+  字符编码和中文乱码分析</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2015/09/27/transaction/"  title="数据库事务隔离级别">
+ <strong>下一篇：</strong><br/> 
+ <span>数据库事务隔离级别
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/10/08/partition-grub-rescue/" data-title="系统盘扩容及双系统启动项修复方法" data-url="http://wangtianzhi.cn/2015/10/08/partition-grub-rescue/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ 
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/web开发/" title="web开发">web开发<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/博客/" title="博客">博客<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/操作系统/" title="操作系统">操作系统<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据库/" title="数据库">数据库<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/REST/" title="REST">REST<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JAX-RS/" title="JAX-RS">JAX-RS<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/ACID/" title="ACID">ACID<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/策略模式/" title="策略模式">策略模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/strategy/" title="strategy">strategy<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/分区/" title="分区">分区<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/grub/" title="grub">grub<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/算法/" title="算法">算法<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/事务/" title="事务">事务<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jersey/" title="jersey">jersey<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/light/" title="light">light<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/个人博客/" title="个人博客">个人博客<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/编码/" title="编码">编码<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/中文乱码/" title="中文乱码">中文乱码<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/启动项/" title="启动项">启动项<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://panpei.net.cn" target="_blank" title="培神的个人网站">crAzyli0n&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jiajixin.cn" target="_blank" title="贾大神的网站">Jason&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://wuchong.me" target="_blank" title="Jark&#39;s Blog">Jark&#39;s Blog</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p>  <br/>
+			当你的才华还撑不起你的野心时，你就应该静下心来学习。</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/wtz123" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/wtz123" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="Tony">Tony</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"wtz123"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-62752575-1', 'auto');  
+ga('send', 'pageview');
+</script>
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F6af02e94d74ff35930f2cdd4a4206185' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

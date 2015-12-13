@@ -1,0 +1,602 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>字符编码和中文乱码分析 | Tony&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Tony">
+    
+
+    
+    <meta name="description" content="一. 编码类型1. ASCIIASCII（American Standard Code for Information Interchange，美国标准信息交换代码）,是基于拉丁字母的一套电脑编码系统，主要用于显示现代英语和其他西欧语言。标准ASCII 码也叫基础ASCII码，使用7 位二进制数来表示所有的大写和小写字母，数字0 到9、标点符号，以及在美式英语中使用的特殊控制字符。其最高位(b7)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="字符编码和中文乱码分析">
+<meta property="og:url" content="http://wangtianzhi.cn/2015/12/13/character-and-chinese-error-code/index.html">
+<meta property="og:site_name" content="Tony's blog">
+<meta property="og:description" content="一. 编码类型1. ASCIIASCII（American Standard Code for Information Interchange，美国标准信息交换代码）,是基于拉丁字母的一套电脑编码系统，主要用于显示现代英语和其他西欧语言。标准ASCII 码也叫基础ASCII码，使用7 位二进制数来表示所有的大写和小写字母，数字0 到9、标点符号，以及在美式英语中使用的特殊控制字符。其最高位(b7)">
+<meta property="og:image" content="/img/jvm-encode.png">
+<meta property="og:image" content="/img/url_encode_process.png">
+<meta property="og:image" content="/img/url_construct.gif">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="字符编码和中文乱码分析">
+<meta name="twitter:description" content="一. 编码类型1. ASCIIASCII（American Standard Code for Information Interchange，美国标准信息交换代码）,是基于拉丁字母的一套电脑编码系统，主要用于显示现代英语和其他西欧语言。标准ASCII 码也叫基础ASCII码，使用7 位二进制数来表示所有的大写和小写字母，数字0 到9、标点符号，以及在美式英语中使用的特殊控制字符。其最高位(b7)">
+
+    
+    <link rel="alternative" href="/atom.xml" title="Tony&#39;s blog" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/myfavicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/myjacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/myjacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/mylogo.png" alt="Tony&#39;s blog" title="Tony&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Tony&#39;s blog">Tony&#39;s blog</a></h1>
+				<h2 class="blog-motto">Talk is cheap, show me the code.</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:wangtianzhi.cn">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/12/13/character-and-chinese-error-code/" title="字符编码和中文乱码分析" itemprop="url">字符编码和中文乱码分析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="Tony" target="_blank" itemprop="author">Tony</a>
+		
+  <p class="article-time">
+    <time datetime="2015-12-13T01:14:33.000Z" itemprop="datePublished"> 发表于 2015-12-13</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#一-_编码类型"><span class="toc-number">1.</span> <span class="toc-text">一. 编码类型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#二-_java中的编码"><span class="toc-number">2.</span> <span class="toc-text">二. java中的编码</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#三-_web编码"><span class="toc-number">3.</span> <span class="toc-text">三. web编码</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#四-_参考文献"><span class="toc-number">4.</span> <span class="toc-text">四. 参考文献</span></a></li></ol>
+		
+		</div>
+		
+		<h4 id="一-_编码类型">一. 编码类型</h4><p><strong>1. ASCII</strong><br>ASCII（American Standard Code for Information Interchange，美国标准信息交换代码）,是基于拉丁字母的一套电脑编码系统，主要用于显示现代英语和其他西欧语言。标准ASCII 码也叫基础ASCII码，使用7 位二进制数来表示所有的大写和小写字母，数字0 到9、标点符号，以及在美式英语中使用的特殊控制字符。其最高位(b7)用作奇偶校验位，后128个称为扩展ASCII码。许多基于x86的系统都支持使用扩展（或“高”）ASCII。扩展ASCII 码允许将每个字符的第8位用于确定附加的128个特殊符号字符、外来语字母和图形符号。<br><strong>2. ISO-8859-1</strong><br>ISO-8859-1编码是单字节编码，<strong>向下兼容ASCII</strong>，其编码范围是0x00-0xFF，0x00-0x7F之间完全和ASCII一致，0x80-0x9F之间是控制字符，0xA0-0xFF之间是文字符号。<br><strong>3. GB2312</strong><br>全称《信息交换用汉字编码字符集·基本集》，是双字节编码。GB 2312的出现，基本满足了汉字的计算机处理需要，它所收录的汉字已经覆盖中国大陆99.75%的使用频率。对于人名、古汉语等方面出现的罕用字，GB 2312不能处理，这导致了后来GBK及GB 18030汉字字符集的出现。<br><strong>4. GBK</strong><br>GBK全称《汉字内码扩展规范》，它的出现是为了扩展 GB2312，加入更多的汉字,包括繁体字。它的编码是和 GB2312 兼容的。<br>注意：gbk和gb2312的中文都是两个字节，英文（半角的）一个字节。<br><strong>5. GB18030</strong><br>是我国的强制标准，它可能是单字节、双字节或者四字节编码，它的编码与 GB2312 编码兼容，这个虽然是国家标准，但是实际应用系统中使用的并不广泛。</p>
+<p><strong>unicode</strong><br>虽然通过使用不同字符集，我们可以在一台机器上查阅不同语言的文档，但是我们仍然无法解决一个问题：在一份文档中显示所有字符。为了解决这个问题，我们需要一个全人类达成共识的巨大的字符集，这就是Unicode字符集。它为每种语言中的每个字符设定了统一并且唯一的二进制编码，以满足跨语言、跨平台进行文本转换、处理的要求。<br>虽然每个字符在Unicode字符集中都能找到唯一确定的编号（字符码，又称Unicode码），但是决定最终字节流的却是具体的字符编码,如utf-16或utf-8。例如同样是对Unicode字符“A”进行编码，UTF-8字符编码得到的字节流是0x41，而UTF-16（大端模式）得到的是0x00 0x41。<br><strong>6. UTF-16</strong><br>UTF-16 是 Unicode 字符在计算机中存取方法的一种具体编码。UTF-16支持Unicode全字符集的编解码，采用了变长编码，最少使用2个字节，如果要编码BMP以外的字符，则需要4个字节结对。当然，一般用BMP字符就够了，因此在网上很多都写utf-16是两个字节。<br><strong>7. UTF-8</strong><br>UTF-8应该是目前应用最广泛的一种Unicode编码方案。由于UCS-2/UTF-16对于ASCII字符使用两个字节进行编码，存储和处理效率相对低下，并且由于ASCII字符经过UTF-16编码后得到的两个字节，高字节始终是0x00，很多C语言的函数都将此字节视为字符串末尾从而导致无法正确解析文本。<br>对于ASCII字符的编码使用单字节，和ASCII编码一摸一样，这样所有原先使用ASCII编解码的文档就可以直接转到UTF-8编码了。对于其他字符，则使用2-4个字节来表示，其中，首字节前置1的数目代表正确解析所需要的字节数。</p>
+<p>UTF-16 与 UTF-8 都是处理 Unicode 编码，它们的编码规则不太相同，相对来说 UTF-16 编码效率最高，字符到字节相互转换更简单，进行字符串操作也更好。它适合在本地磁盘和内存之间使用，可以进行字符和字节之间快速切换，如 Java 的内存编码就是采用 UTF-16 编码。但是它不适合在网络之间传输，因为网络传输容易损坏字节流，一旦字节流损坏将很难恢复，相比较而言 UTF-8 更适合网络传输，对 ASCII 字符采用单字节存储，另外单个字符损坏也不会影响后面其它字符，在编码效率上介于 GBK 和 UTF-16 之间，所以 UTF-8 在编码效率上和编码安全性上做了平衡，是理想的中文编码方式。</p>
+<h4 id="二-_java中的编码">二. java中的编码</h4><p>在JVM内，从class文件加载的源码全部以UNICODE编码。在内存中倒腾String等数据是编码无关的，但是程序本身难免牵涉到外部文件的读写（如xml，properties文件等）、与数据库的交互、网络数据流读写等。这样就会造成很多非unicode编码的字符存在于JVM中，这也就是乱码出现的根本原因所在。</p>
+<p>在使用IDE进行开发时，比如ECLIPSE,IDEA等，可以指定源文件（.java）的编码格式，此处的编码格式是指Java文件自身的编码。而xml、jsp、html等文件是能够自身描述文件编码的。xml可以通过encoding来指定编码方式，而html通过content-type方式来指定，如果打开这些文件，就会调用相应的编码方式来处理。但是经过javac命令编译后，生成的.class文件毫无疑问都是Unicode编码。<br>jvm在各个阶段都编码方式如下图所示：<br><img src="/img/jvm-encode.png" alt="jvm编码方式"><br>在存储java源文件时，是按照java文件的编码对文件进行编码，然后存储在磁盘中。当要对java源文件进行编译时，用源文件的编码对其进行解码，编译生成的class文件为unicode的编码方式。最终jvm加载class文件执行到jvm中，在jvm中的编码方式也是unicode。</p>
+<p>在java中，主要用以下两个方法来对String进行编解码：</p>
+<ul>
+<li>getBytes(String charset)<br>将字符串按照指定的charset编码，返回其字节方式的表示。具体来说，实现的是从unicode—&gt;charset的转变。</li>
+<li>new String(byte[] bytes,String charset)<br>将字节数组按照charset进行识别，最终转化为Unicode存储在JVM内，编码是从charset－&gt;unicode的转变。</li>
+</ul>
+<p>例如如下的例子：<br><figure class="highlight processing"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">String</span> a=<span class="string">"中文"</span>;<span class="comment">//当然你可以以unicode的形式写成String a="\u4E2D\u6587"；</span></span><br><span class="line"><span class="built_in">byte</span>[] bs = a.getBytes(<span class="string">"gbk"</span>);</span><br><span class="line"><span class="keyword">String</span> b= <span class="keyword">new</span> <span class="keyword">String</span>(bs,<span class="string">"iso-8859-1"</span>);<span class="comment">//如果这里使用gbk编码进行解码的话，会自然的得到原来的a。</span></span><br></pre></td></tr></table></figure></p>
+<p>可以看出这个时候已经为乱码了，不过由于没有信息丢失，所以还是可以恢复成中文的。<br>恢复的过程为 <code>String c = new String(b.getBytes(&quot;iso-8859-1&quot;),&quot;gbk&quot;)</code>;<br>这种方式中间多了两次编解码，不推荐使用。</p>
+<h4 id="三-_web编码">三. web编码</h4><p>用户从浏览器端发起一个 HTTP 请求，需要存在编码的地方是 URL、Cookie、Parameter。服务器端接受到 HTTP 请求后要解析 HTTP 协议，其中 URI、Cookie 和 POST 表单参数需要解码，服务器端可能还需要读取数据库中的数据，本地或网络中其它地方的文本文件，这些数据都可能存在编码问题，当 Servlet 处理完所有请求的数据后，需要将这些数据再编码通过 Socket 发送到用户请求的浏览器里，再经过浏览器解码成为文本。这些过程如下图所示：<br><img src="/img/url_encode_process.png" alt="该图来自参考文献3的文章"></p>
+<p><strong>1. request编码</strong><br>URL的几个组成部分如下图所示：<br><img src="/img/url_construct.gif" alt="该图来自参考文献3的文章"></p>
+<p>上图中以 Tomcat 作为 Servlet Engine 为例，它们分别对应到下面这些配置文件中：<br>Port 对应在 Tomcat 的 <code>&lt;Connector port=&quot;8080&quot;/&gt;</code> 中配置，而 Context Path 在 <code>&lt;Context path=&quot;/examples&quot;/&gt;</code> 中配置，Servlet Path 在 Web 应用的 web.xml 中的。注意这里是在浏览器里直接输入 URL 所以是通过 Get 方法请求的，如果是 POST 方法请求的话，QueryString 将通过表单方式提交到服务器端。<br><strong>a.URI</strong><br>一般来说，URL只能使用英文字母、阿拉伯数字和某些标点符号，不能使用其他文字和符号,这是因为网络标准<a href="http://www.ietf.org/rfc/rfc1738.txt" target="_blank" rel="external">RFC 1738</a>做了硬性规定:</p>
+<blockquote>
+<p>“只有字母和数字[0-9a-zA-Z]、一些特殊符号”$-_.+!*’(),”[不包括双引号]、以及某些保留字，才可以不经过编码直接用于URL。”</p>
+</blockquote>
+<p>这意味着，如果URL中有汉字，就必须编码后使用。但是麻烦的是，RFC 1738没有规定具体的编码方法，而是交给应用程序（浏览器）自己决定。这导致”URL编码”成为了一个混乱的领域。由于不同浏览器可能采取不同的编码方式，因此url最好不要有中文字符；对于那些用js或模拟浏览器方式请求的（如httpclient），可以将url进行编码再提交，这样就能够得到控制。<br>在java中有<code>URLEncoder.encode(String s,String enc)／URLDecoder.decode(String s,String enc)</code>等方法，在javascript中有<code>escape/unescape</code>,<code>encodeURI/decodeURI</code>,<code>encodeURIComponent/decodeURIComponent</code>等方法。<br><strong>b.POST</strong><br>POST 表单参数传递方式是通过 HTTP 的 BODY 传递到服务端的。当我们在页面上点击 submit 按钮时浏览器首先将根据 ContentType 的 Charset 编码格式对表单填的参数进行编码然后提交到服务器端。</p>
+<p><strong>2. request解码</strong><br>在服务器收到浏览器发来的请求后，需要对一些内容进行解码:<br><strong>a.URI</strong><br>对 URL 的 URI 部分进行解码的字符集是在 connector 的 <code>&lt;Connector URIEncoding=”UTF-8”/&gt;</code> 中定义的，如果没有定义，那么将以默认编码 ISO-8859-1 解析。所以如果有中文 URL 时最好把 URIEncoding 设置成 UTF-8 编码。<br><strong>b.GET</strong><br>GET方式的请求，QueryString 的解码字符集要么是 Header 中 ContentType 中定义的 Charset 要么就是默认的 ISO-8859-1，要使用 ContentType 中定义的编码就要设置 connector 的 <code>&lt;Connector URIEncoding=”UTF-8” useBodyEncodingForURI=”true”/&gt;</code>中的 useBodyEncodingForURI 设置为 true。这个配置项的名字有点让人产生混淆，它并不是对整个 URI 都采用 BodyEncoding 进行解码而仅仅是对 QueryString 使用 BodyEncoding 解码。设置了URIEncoding=“UTF-8”这样也可以。若useBodyEncodingForURI和URIEncoding同时设置了，useBodyEncodingForURI优先级高于URIEncoding。<br><strong>c.POST</strong><br>在服务器端同样也是用 ContentType 中字符集进行解码。所以通过 POST 表单提交的参数一般不会出现问题，而且这个字符集编码是我们自己设置的，可以通过 request.setCharacterEncoding(charset) 来设置。post方式的编码跟useBodyEncodingForURI和URIEncoding没关系。<br><strong>d.header</strong><br>Header中传递的其它参数如 Cookie、redirectPath。对 Header 中的项进行解码也是在调用 request.getHeader 是进行的，如果请求的 Header项没有解码则调用 MessageBytes 的 toString 方法，这个方法将从 byte 到 char 的转化使用的默认编码也是 ISO-8859-1，而我们也不能设置 Header 的其它解码格式，所以如果你设置 Header 中有非 ASCII 字符解码肯定会有乱码。</p>
+<p><strong>3. response编码</strong><br>当用户请求的资源已经成功获取后，这些内容将通过 response 返回给客户端浏览器，这个过程先要经过编码再到浏览器进行解码。这个过程的编解码字符集可以通过 response.setCharacterEncoding 来设置，它将会覆盖 request.getCharacterEncoding 的值，并且通过 Header 的 Content-Type 返回客户端。服务器按照response.setCharacterEncoding—contentType—pageEncoding的优先顺序，对要发送的数据进行编码。</p>
+<p><strong>4. response解码</strong><br>浏览器接受到返回的 socket 流时将通过 Content-Type 的 charset 来解码，如果返回的 HTTP Header 中 Content-Type 没有设置 charset，那么浏览器将根据 Html 的 <code>&lt;meta HTTP-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=GBK&quot; /&gt;</code> 中的 charset 来解码。如果也没有定义的话，那么浏览器将使用默认的编码来解码。</p>
+<p><strong>注意：</strong></p>
+<ol>
+<li>GET 方式 HTTP 请求的 QueryString 与 POST 方式 HTTP 请求的表单参数都是作为 Parameters 保存，都是通过 request.getParameter 获取参数值。对它们的<strong>解码是在 request.getParameter 方法第一次被调用时进行的</strong>。所以<strong>request.setCharacterEncoding 应该设置在request.getParameter之前</strong>。</li>
+<li><p>在java web开发中经常会添加filter来设置字符编码，如下所示：  </p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">filter</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="title">filter-name</span>&gt;</span>encodingFilter<span class="tag">&lt;/<span class="title">filter-name</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="title">filter-class</span>&gt;</span>org.springframework.web.filter.CharacterEncodingFilter<span class="tag">&lt;/<span class="title">filter-class</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="title">init-param</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="title">param-name</span>&gt;</span>encoding<span class="tag">&lt;/<span class="title">param-name</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="title">param-value</span>&gt;</span>UTF-8<span class="tag">&lt;/<span class="title">param-value</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;/<span class="title">init-param</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="title">init-param</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="title">param-name</span>&gt;</span>forceEncoding<span class="tag">&lt;/<span class="title">param-name</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="title">param-value</span>&gt;</span>true<span class="tag">&lt;/<span class="title">param-value</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;/<span class="title">init-param</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="title">filter</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在CharacterEncodingFilter里面，会执行<code>request.setCharacterEncoding(&#39;UTF-8&#39;)</code>的操作。该filter要设置在其他filter之前，否则可能不起作用，因为解码是在 request.getParameter 方法第一次被调用时进行的，如果其他filter通过request获取了参数，那么就解码了，再给request设置编码就不起作用了。</p>
+</li>
+<li>URIEncoding就是针对请求参数get的编码设置的，而filter的<code>request.setCharacterEncoding(&#39;UTF-8&#39;)</code>或者请求header中的content-type中的编码都是针对请求体的,不影响get方式的请求。</li>
+<li>在jsp中<code>&lt;%@page language=&quot;java&quot; contentType=&quot;text/html; charset=utf-8&quot; pageEncoding=&quot;utf-8&quot;%&gt;</code>, pageEncoding和contentType都可以设置JSP源文件和响应正文中的字符集编码，但:<br>设置JSP源文件字符集时,优先级为pageEncoding&gt;contentType。如果都没有设置，默认ISO-8859-1。<br>设置响应输出的字符集时,优先级为contentType&gt;pageEncoding。如果都没有设置，默认ISO-8859-1。</li>
+<li>jsp编译成servlet步骤：<br>第一步将jsp编译成.java：用pageEncoding编码来解码jsp文件，解码成unicode,转成servlet的java文件，用utf-8进行编码存储；<br>第二步用javac将java源码编译成.class文件：用utf-8解码java源码，转成unicode编码的class文件。</li>
+</ol>
+<h4 id="四-_参考文献">四. 参考文献</h4><ol>
+<li><a href="http://www.imkevinyang.com/2010/06/%E5%85%B3%E4%BA%8E%E5%AD%97%E7%AC%A6%E7%BC%96%E7%A0%81%EF%BC%8C%E4%BD%A0%E6%89%80%E9%9C%80%E8%A6%81%E7%9F%A5%E9%81%93%E7%9A%84.html" target="_blank" rel="external">关于字符编码，你所需要知道的（ASCII,Unicode,Utf-8,GB2312…）</a></li>
+<li><a href="http://www.imkevinyang.com/2009/02/%E5%AD%97%E7%AC%A6%E7%BC%96%E8%A7%A3%E7%A0%81%E7%9A%84%E6%95%85%E4%BA%8B%EF%BC%88ascii%EF%BC%8Cansi%EF%BC%8Cunicode%EF%BC%8Cutf-8%E5%8C%BA%E5%88%AB%EF%BC%89.html" target="_blank" rel="external">字符编解码的故事（ASCII，ANSI，Unicode，Utf-8区别）</a></li>
+<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-chinesecoding/" target="_blank" rel="external">深入分析 Java 中的中文编码问题</a></li>
+<li><a href="http://www.ruanyifeng.com/blog/2010/02/url_encoding.html" target="_blank" rel="external">关于url编码</a></li>
+<li><a href="http://lukejin.iteye.com/blog/586088" target="_blank" rel="external">深度剖析java的字符编码</a></li>
+<li><a href="http://www.w3.org/International/questions/qa-byte-order-mark" target="_blank" rel="external">The byte-order mark(BOM) in HTML</a></li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/web开发/">web开发</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/中文乱码/">中文乱码</a><a href="/tags/编码/">编码</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://wangtianzhi.cn/2015/12/13/character-and-chinese-error-code/" data-title="字符编码和中文乱码分析 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/10/08/partition-grub-rescue/"  title="系统盘扩容及双系统启动项修复方法">
+ <strong>下一篇：</strong><br/> 
+ <span>系统盘扩容及双系统启动项修复方法
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/12/13/character-and-chinese-error-code/" data-title="字符编码和中文乱码分析" data-url="http://wangtianzhi.cn/2015/12/13/character-and-chinese-error-code/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#一-_编码类型"><span class="toc-number">1.</span> <span class="toc-text">一. 编码类型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#二-_java中的编码"><span class="toc-number">2.</span> <span class="toc-text">二. java中的编码</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#三-_web编码"><span class="toc-number">3.</span> <span class="toc-text">三. web编码</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#四-_参考文献"><span class="toc-number">4.</span> <span class="toc-text">四. 参考文献</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/web开发/" title="web开发">web开发<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/博客/" title="博客">博客<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/操作系统/" title="操作系统">操作系统<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据库/" title="数据库">数据库<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/REST/" title="REST">REST<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JAX-RS/" title="JAX-RS">JAX-RS<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/ACID/" title="ACID">ACID<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/策略模式/" title="策略模式">策略模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/strategy/" title="strategy">strategy<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/分区/" title="分区">分区<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/grub/" title="grub">grub<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/算法/" title="算法">算法<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/事务/" title="事务">事务<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jersey/" title="jersey">jersey<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/light/" title="light">light<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/个人博客/" title="个人博客">个人博客<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/编码/" title="编码">编码<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/中文乱码/" title="中文乱码">中文乱码<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/启动项/" title="启动项">启动项<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://panpei.net.cn" target="_blank" title="培神的个人网站">crAzyli0n&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jiajixin.cn" target="_blank" title="贾大神的网站">Jason&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://wuchong.me" target="_blank" title="Jark&#39;s Blog">Jark&#39;s Blog</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p>  <br/>
+			当你的才华还撑不起你的野心时，你就应该静下心来学习。</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/wtz123" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/wtz123" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="Tony">Tony</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"wtz123"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-62752575-1', 'auto');  
+ga('send', 'pageview');
+</script>
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F6af02e94d74ff35930f2cdd4a4206185' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

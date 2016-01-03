@@ -1,0 +1,722 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>quartz集群调度与源码剖析 | Tony&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Tony">
+    
+
+    
+    <meta name="description" content="一.quartz概述quartz是一个用JAVA实现的开源的任务调度框架。quartz可以用来创建简单或复杂的任务调度，它包括了许多企业级的功能，如支持JTA transactions和集群等。quartz是现在最流行的JAVA任务调度框架。
+quartz具有如下的特点：
+
+强大的调度功能，例如支持丰富多样的调度方法，可以满足各种常规及特殊的需求；
+灵活的应用方式，例如支持任务和调度的多种组合方式">
+<meta property="og:type" content="article">
+<meta property="og:title" content="quartz集群调度与源码剖析">
+<meta property="og:url" content="http://wangtianzhi.cn/2016/01/03/quartz-source-analysis/index.html">
+<meta property="og:site_name" content="Tony's blog">
+<meta property="og:description" content="一.quartz概述quartz是一个用JAVA实现的开源的任务调度框架。quartz可以用来创建简单或复杂的任务调度，它包括了许多企业级的功能，如支持JTA transactions和集群等。quartz是现在最流行的JAVA任务调度框架。
+quartz具有如下的特点：
+
+强大的调度功能，例如支持丰富多样的调度方法，可以满足各种常规及特殊的需求；
+灵活的应用方式，例如支持任务和调度的多种组合方式">
+<meta property="og:image" content="/img/quartz启动时序图.png">
+<meta property="og:image" content="/img/QuartzSchedulerThread.png">
+<meta property="og:image" content="/img/quartz集群trigger状态图.jpg">
+<meta property="og:image" content="/img/MisfireHandler.png">
+<meta property="og:image" content="/img/ClusterManager.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="quartz集群调度与源码剖析">
+<meta name="twitter:description" content="一.quartz概述quartz是一个用JAVA实现的开源的任务调度框架。quartz可以用来创建简单或复杂的任务调度，它包括了许多企业级的功能，如支持JTA transactions和集群等。quartz是现在最流行的JAVA任务调度框架。
+quartz具有如下的特点：
+
+强大的调度功能，例如支持丰富多样的调度方法，可以满足各种常规及特殊的需求；
+灵活的应用方式，例如支持任务和调度的多种组合方式">
+
+    
+    <link rel="alternative" href="/atom.xml" title="Tony&#39;s blog" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/myfavicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/myjacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/myjacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/mylogo.png" alt="Tony&#39;s blog" title="Tony&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Tony&#39;s blog">Tony&#39;s blog</a></h1>
+				<h2 class="blog-motto">Talk is cheap, show me the code.</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:wangtianzhi.cn">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/01/03/quartz-source-analysis/" title="quartz集群调度与源码剖析" itemprop="url">quartz集群调度与源码剖析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="Tony" target="_blank" itemprop="author">Tony</a>
+		
+  <p class="article-time">
+    <time datetime="2016-01-03T12:39:19.000Z" itemprop="datePublished"> 发表于 2016-01-03</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#一-quartz概述"><span class="toc-number">1.</span> <span class="toc-text">一.quartz概述</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#二-quartz启动流程"><span class="toc-number">2.</span> <span class="toc-text">二.quartz启动流程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#三-QuartzSchedulerThread线程"><span class="toc-number">3.</span> <span class="toc-text">三.QuartzSchedulerThread线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#四-misfireHandler线程"><span class="toc-number">4.</span> <span class="toc-text">四.misfireHandler线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#五-clusterManager线程"><span class="toc-number">5.</span> <span class="toc-text">五.clusterManager线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#六-_参考文献"><span class="toc-number">6.</span> <span class="toc-text">六. 参考文献</span></a></li></ol>
+		
+		</div>
+		
+		<h4 id="一-quartz概述">一.quartz概述</h4><p>quartz是一个用JAVA实现的开源的任务调度框架。quartz可以用来创建简单或复杂的任务调度，它包括了许多企业级的功能，如支持JTA transactions和集群等。quartz是现在最流行的JAVA任务调度框架。</p>
+<p><strong>quartz具有如下的特点</strong>：</p>
+<ol>
+<li>强大的调度功能，例如支持丰富多样的调度方法，可以满足各种常规及特殊的需求；</li>
+<li>灵活的应用方式，例如支持任务和调度的多种组合方式，支持调度数据的多种存储方式；</li>
+<li>分布式和集群能力，支持集群运行，具有负载均衡、故障恢复等功能，伸缩性高，高可用。</li>
+</ol>
+<p>此外，quartz是spring的默认调度框架，能够很容易的与spring集成。本文基于spring3.2.2和quartz2.2.1来讨论。注意 <strong>spring3.1以下的版本必须使用quartz1.x系列,3.1以上的版本才支持quartz 2.x</strong>，因为quartz1.x和quartz2.x有些地方不兼容。</p>
+<p><strong>quartz调度核心元素</strong>：</p>
+<ol>
+<li>Scheduler:任务调度器，是实际执行任务调度的控制器。在spring中通过SchedulerFactoryBean封装起来。</li>
+<li>Trigger：触发器，用于定义任务调度的时间规则，有SimpleTrigger,CronTrigger,DateIntervalTrigger和NthIncludedDayTrigger，其中CronTrigger用的比较多，本文主要介绍这种方式。CronTrigger在spring中封装在CronTriggerFactoryBean中。</li>
+<li>Calendar:它是一些日历特定时间点的集合。一个trigger可以包含多个Calendar，以便排除或包含某些时间点。</li>
+<li>JobDetail:用来描述Job实现类及其它相关的静态信息，如Job名字、关联监听器等信息。在spring中有JobDetailFactoryBean和 MethodInvokingJobDetailFactoryBean两种实现，如果任务调度只需要执行某个类的某个方法，就可以通过MethodInvokingJobDetailFactoryBean来调用。</li>
+<li>Job：是一个接口，只有一个方法void execute(JobExecutionContext context),开发者实现该接口定义运行任务，JobExecutionContext类提供了调度上下文的各种信息。Job运行时的信息保存在JobDataMap实例中。实现Job接口的任务，默认是无状态的，若要将Job设置成有状态的，在quartz中是给实现的Job添加@DisallowConcurrentExecution注解（以前是实现StatefulJob接口，现在已被Deprecated）,在与spring结合中可以在spring配置文件的job detail中配置concurrent参数。</li>
+</ol>
+<p><strong>quartz集群配置：</strong><br>quartz集群是通过数据库表来感知其他的应用的，各个节点之间并没有直接的通信。只有使用持久的JobStore才能完成Quartz集群。<br>数据库表：以前有12张表，现在只有11张表，现在没有存储listener相关的表，多了QRTZ_SIMPROP_TRIGGERS表：</p>
+<table>
+<thead>
+<tr>
+<th>Table name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>QRTZ_CALENDARS</td>
+<td>存储Quartz的Calendar信息</td>
+</tr>
+<tr>
+<td>QRTZ_CRON_TRIGGERS</td>
+<td>存储CronTrigger，包括Cron表达式和时区信息</td>
+</tr>
+<tr>
+<td>QRTZ_FIRED_TRIGGERS</td>
+<td>存储与已触发的Trigger相关的状态信息，以及相联Job的执行信息</td>
+</tr>
+<tr>
+<td>QRTZ_PAUSED_TRIGGER_GRPS</td>
+<td>存储已暂停的Trigger组的信息</td>
+</tr>
+<tr>
+<td>QRTZ_SCHEDULER_STATE</td>
+<td>存储少量的有关Scheduler的状态信息，和别的Scheduler实例</td>
+</tr>
+<tr>
+<td><strong>QRTZ_LOCKS</strong></td>
+<td>存储程序的悲观锁的信息</td>
+</tr>
+<tr>
+<td>QRTZ_JOB_DETAILS</td>
+<td>存储每一个已配置的Job的详细信息</td>
+</tr>
+<tr>
+<td>QRTZ_SIMPLE_TRIGGERS</td>
+<td>存储简单的Trigger，包括重复次数、间隔、以及已触的次数</td>
+</tr>
+<tr>
+<td>QRTZ_BLOG_TRIGGERS</td>
+<td>Trigger作为Blob类型存储</td>
+</tr>
+<tr>
+<td>QRTZ_TRIGGERS</td>
+<td>存储已配置的Trigger的信息</td>
+</tr>
+<tr>
+<td>QRTZ_SIMPROP_TRIGGERS</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>QRTZ_LOCKS就是Quartz集群实现同步机制的行锁表,包括以下几个锁：CALENDAR_ACCESS 、JOB_ACCESS、MISFIRE_ACCESS 、STATE_ACCESS 、TRIGGER_ACCESS。</p>
+<h4 id="二-quartz启动流程">二.quartz启动流程</h4><p>若quartz是配置在spring中，当服务器启动时，就会装载相关的bean。SchedulerFactoryBean实现了InitializingBean接口，因此在初始化bean的时候，会执行afterPropertiesSet方法，该方法将会调用SchedulerFactory(DirectSchedulerFactory 或者 StdSchedulerFactory，通常用StdSchedulerFactory)创建Scheduler。SchedulerFactory在创建quartzScheduler的过程中，将会读取配置参数，初始化各个组件，关键组件如下：</p>
+<ol>
+<li><p><strong>ThreadPool</strong>:一般是使用SimpleThreadPool,SimpleThreadPool创建了一定数量的WorkerThread实例来使得Job能够在线程中进行处理。WorkerThread是定义在SimpleThreadPool类中的内部类，它实质上就是一个线程。在SimpleThreadPool中有三个list：workers-存放池中所有的线程引用，availWorkers-存放所有空闲的线程，busyWorkers-存放所有工作中的线程；<br>线程池的配置参数如下所示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">org.quartz.threadPool.class=org.quartz.simpl.SimpleThreadPool</span><br><span class="line">org.quartz.threadPool.threadCount=<span class="number">3</span></span><br><span class="line">org.quartz.threadPool.threadPriority=<span class="number">5</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>JobStore</strong>:分为存储在内存的RAMJobStore和存储在数据库的JobStoreSupport(包括JobStoreTX和JobStoreCMT两种实现，JobStoreCMT是依赖于容器来进行事务的管理，而JobStoreTX是自己管理事务），若要使用集群要使用JobStoreSupport的方式；</p>
+</li>
+<li><strong>QuartzSchedulerThread</strong>:用来进行任务调度的线程，在初始化的时候paused=true,halted=false,虽然线程开始运行了，但是paused=true，线程会一直等待，直到start方法将paused置为false；</li>
+</ol>
+<p>另外，SchedulerFactoryBean还实现了SmartLifeCycle接口，因此初始化完成后，会执行start()方法，该方法将主要会执行以下的几个动作：</p>
+<ol>
+<li>创建<strong>ClusterManager</strong>线程并启动线程:该线程用来进行集群故障检测和处理，将在下文详细讨论；</li>
+<li>创建<strong>MisfireHandler</strong>线程并启动线程:该线程用来进行misfire任务的处理，将在下文详细讨论；</li>
+<li>置QuartzSchedulerThread的paused=false，调度线程才真正开始调度；</li>
+</ol>
+<p>整个启动流程如下图：<br><img src="/img/quartz启动时序图.png" alt="quartz启动时序图"></p>
+<h4 id="三-QuartzSchedulerThread线程">三.QuartzSchedulerThread线程</h4><p>线程的主要逻辑代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> (!halted.get()) &#123;</span><br><span class="line">  <span class="keyword">int</span> availThreadCount = qsRsrcs.getThreadPool().blockForAvailableThreads();</span><br><span class="line">  triggers = qsRsrcs.getJobStore().acquireNextTriggers(now + idleWaitTime, Math.min(availThreadCount, qsRsrcs.getMaxBatchSize()),qsRsrcs.getBatchTimeWindow());</span><br><span class="line">  <span class="keyword">long</span> triggerTime = triggers.get(<span class="number">0</span>).getNextFireTime().getTime();</span><br><span class="line">  <span class="keyword">long</span> timeUntilTrigger = triggerTime - now;</span><br><span class="line">  <span class="keyword">while</span>(timeUntilTrigger &gt; <span class="number">2</span>) &#123;</span><br><span class="line">    now = System.currentTimeMillis();</span><br><span class="line">    timeUntilTrigger = triggerTime - now;</span><br><span class="line">  &#125;</span><br><span class="line">  List&lt;TriggerFiredResult&gt; bndle = qsRsrcs.getJobStore().triggersFired(triggers);</span><br><span class="line">  <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>;i &lt; res.size();i++)&#123;</span><br><span class="line">    JobRunShell shell = qsRsrcs.getJobRunShellFactory().createJobRunShell(bndle);</span><br><span class="line">    shell.initialize(qs);</span><br><span class="line">    qsRsrcs.getThreadPool().runInThread(shell);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>先获取线程池中的可用线程数量（若没有可用的会阻塞，直到有可用的）；</li>
+<li>获取30m内要执行的trigger(即acquireNextTriggers)：<br>获取trigger的锁，通过select …<strong>for update</strong>方式实现；获取30m内（可配置）要执行的triggers（<strong>需要保证集群节点的时间一致</strong>），若<strong>@ConcurrentExectionDisallowed</strong>且列表存在该条trigger则跳过，否则更新trigger状态为ACQUIRED(刚开始为WAITING)；插入firedTrigger表，状态为ACQUIRED;（注意：在RAMJobStore中，有个timeTriggers，排序方式是按触发时间nextFireTime排的；JobStoreSupport从数据库取出triggers时是按照nextFireTime排序）;</li>
+<li>等待直到获取的trigger中最先执行的trigger在2ms内；</li>
+<li>triggersFired：<br>1）更新firedTrigger的status=EXECUTING;<br>2）更新trigger下一次触发的时间；<br>3）更新trigger的状态：无状态的trigger-&gt;WAITING，有状态的trigger-&gt;BLOCKED，若nextFireTime==null -&gt;COMPLETE；<br>4） commit connection,释放锁；</li>
+<li>针对每个要执行的trigger，创建JobRunShell，并放入线程池执行：<br>1）execute:执行job<br>2）获取TRIGGER_ACCESS锁<br>3）若是有状态的job：更新trigger状态：BLOCKED-&gt;WAITING,PAUSED_BLOCKED-&gt;BLOCKED<br>4）若@PersistJobDataAfterExecution，则updateJobData<br>5）删除firedTrigger<br>6）commit connection，释放锁</li>
+</ol>
+<p>线程执行流程如下图所示：<br><img src="/img/QuartzSchedulerThread.png" alt="QuartzSchedulerThread时序图"></p>
+<p>任务调度执行过程中，trigger的状态变化如下图所示：<br><img src="/img/quartz集群trigger状态图.jpg" alt="该图来自参考文献5"></p>
+<h4 id="四-misfireHandler线程">四.misfireHandler线程</h4><p>下面这些原因可能造成 misfired job:</p>
+<ol>
+<li>系统因为某些原因被重启。在系统关闭到重新启动之间的一段时间里，可能有些任务会被 misfire；</li>
+<li>Trigger 被暂停（suspend）的一段时间里，有些任务可能会被 misfire；</li>
+<li>线程池中所有线程都被占用，导致任务无法被触发执行，造成 misfire；</li>
+<li>有状态任务在下次触发时间到达时，上次执行还没有结束；为了处理 misfired job，Quartz 中为 trigger 定义了处理策略，主要有下面两种：MISFIRE_INSTRUCTION_FIRE_ONCE_NOW：针对 misfired job 马上执行一次；MISFIRE_INSTRUCTION_DO_NOTHING：忽略 misfired job，等待下次触发；默认是MISFIRE_INSTRUCTION_SMART_POLICY，该策略在CronTrigger中=MISFIRE_INSTRUCTION_FIRE_ONCE_NOW线程默认1分钟执行一次；在一个事务中，默认一次最多recovery 20个；</li>
+</ol>
+<p>执行流程：</p>
+<ol>
+<li>若配置(默认为true，可配置)成获取锁前先检查是否有需要recovery的trigger，先获取misfireCount；</li>
+<li>获取TRIGGER_ACCESS锁；</li>
+<li>hasMisfiredTriggersInState：获取misfired的trigger，默认一个事务里只能最大20个misfired trigger（可配置），misfired判断依据：status=waiting,next_fire_time  &lt; current_time-misfirethreshold(可配置，默认1min)</li>
+<li>notifyTriggerListenersMisfired</li>
+<li>updateAfterMisfire:获取misfire策略(默认是MISFIRE_INSTRUCTION_SMART_POLICY，该策略在CronTrigger中=MISFIRE_INSTRUCTION_FIRE_ONCE_NOW)，根据策略更新nextFireTime；</li>
+<li>将nextFireTime等更新到trigger表；</li>
+<li>commit connection，释放锁8.如果还有更多的misfired，sleep短暂时间(为了集群负载均衡)，否则sleep misfirethreshold时间，后继续轮询；</li>
+</ol>
+<p>misfireHandler线程执行流程如下图所示：<br><img src="/img/MisfireHandler.png" alt="misfireHandler线程时序图"></p>
+<h4 id="五-clusterManager线程">五.clusterManager线程</h4><p>初始化：<br>failedInstance=failed+self+firedTrigger表中的schedulerName在scheduler_state表中找不到的（孤儿）</p>
+<p>线程执行：<br>每个服务器会定时(org.quartz.jobStore.<strong>clusterCheckinInterval</strong>这个时间)更新SCHEDULER_STATE表的LAST_CHECKIN_TIME，若这个字段远远超出了该更新的时间，则认为该服务器实例挂了；<br>注意：每个服务器实例有唯一的id，若配置为<strong>AUTO</strong>，则为hostname+current_time</p>
+<p>线程执行的具体流程：</p>
+<ol>
+<li>检查是否有超时的实例failedInstances;</li>
+<li>更新该服务器实例的LAST_CHECKIN_TIME；<br>若有超时的实例：</li>
+<li>获取STATE_ACCESS锁；</li>
+<li>获取超时的实例failedInstances;</li>
+<li>获取TRIGGER_ACCESS锁；</li>
+<li>clusterRecover:</li>
+</ol>
+<ul>
+<li>针对每个failedInstances，通过instanceId获取每个实例的firedTriggers;</li>
+<li>针对每个firedTrigger：<br>1) 更新trigger状态：<br>BLOCKED-&gt;WAITING<br>PAUSED_BLOCKED-&gt;PAUSED<br>ACQUIRED-&gt;WAITING<br>2) 若firedTrigger不是ACQUIRED状态（在执行状态）,且<strong>jobRequestRecovery</strong>=true:<br>创建一个SimpleTrigger，存储到trigger表，status=waiting,MISFIRE_INSTR=MISFIRE_INSTRUCTION_IGNORE_MISFIRE_POLICY.<br>3) 删除firedTrigger</li>
+</ul>
+<p>clusterManager线程执行时序图如下图所示：<br><img src="/img/ClusterManager.png" alt="clusterRecover线程时序图"></p>
+<h4 id="六-_参考文献">六. 参考文献</h4><ol>
+<li>Quartz Documentation <a href="http://quartz-scheduler.org/documentation" target="_blank" rel="external">http://quartz-scheduler.org/documentation</a></li>
+<li>spring javadoc-api <a href="http://docs.spring.io/spring/docs/4.3.0.BUILD-SNAPSHOT/javadoc-api/" target="_blank" rel="external">http://docs.spring.io/spring/docs/4.3.0.BUILD-SNAPSHOT/javadoc-api/</a> </li>
+<li>基于Quartz开发企业级任务调度应用 <a href="https://www.ibm.com/developerworks/cn/opensource/os-cn-quartz/" target="_blank" rel="external">https://www.ibm.com/developerworks/cn/opensource/os-cn-quartz/</a></li>
+<li>quartz应用与集群原理分析 <a href="http://tech.meituan.com/mt-crm-quartz.html" target="_blank" rel="external">http://tech.meituan.com/mt-crm-quartz.html</a></li>
+<li>quartz详解2：quartz由浅入深 <a href="http://ecmcug.itpub.net/11627468/viewspace-1763498/" target="_blank" rel="external">http://ecmcug.itpub.net/11627468/viewspace-1763498/</a></li>
+<li>quartz详解4：quartz线程管理 <a href="http://blog.itpub.net/11627468/viewspace-1766967/" target="_blank" rel="external">http://blog.itpub.net/11627468/viewspace-1766967/</a></li>
+<li>quartz学习笔记 <a href="http://www.cnblogs.com/yunxuange/archive/2012/08/28/2660141.html" target="_blank" rel="external">http://www.cnblogs.com/yunxuange/archive/2012/08/28/2660141.html</a></li>
+<li>quartz集群调度机制调研及源码分析 <a href="http://demo.netfoucs.com/gklifg/article/details/27090179" target="_blank" rel="external">http://demo.netfoucs.com/gklifg/article/details/27090179</a></li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/web开发/">web开发</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/quartz/">quartz</a><a href="/tags/源码分析/">源码分析</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://wangtianzhi.cn/2016/01/03/quartz-source-analysis/" data-title="quartz集群调度与源码剖析 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/12/13/character-and-chinese-error-code/"  title="字符编码和中文乱码分析">
+ <strong>下一篇：</strong><br/> 
+ <span>字符编码和中文乱码分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/01/03/quartz-source-analysis/" data-title="quartz集群调度与源码剖析" data-url="http://wangtianzhi.cn/2016/01/03/quartz-source-analysis/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#一-quartz概述"><span class="toc-number">1.</span> <span class="toc-text">一.quartz概述</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#二-quartz启动流程"><span class="toc-number">2.</span> <span class="toc-text">二.quartz启动流程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#三-QuartzSchedulerThread线程"><span class="toc-number">3.</span> <span class="toc-text">三.QuartzSchedulerThread线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#四-misfireHandler线程"><span class="toc-number">4.</span> <span class="toc-text">四.misfireHandler线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#五-clusterManager线程"><span class="toc-number">5.</span> <span class="toc-text">五.clusterManager线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#六-_参考文献"><span class="toc-number">6.</span> <span class="toc-text">六. 参考文献</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/web开发/" title="web开发">web开发<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/博客/" title="博客">博客<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/操作系统/" title="操作系统">操作系统<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据库/" title="数据库">数据库<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JAX-RS/" title="JAX-RS">JAX-RS<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/REST/" title="REST">REST<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/ACID/" title="ACID">ACID<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/策略模式/" title="策略模式">策略模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/strategy/" title="strategy">strategy<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/分区/" title="分区">分区<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/grub/" title="grub">grub<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/启动项/" title="启动项">启动项<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/事务/" title="事务">事务<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jersey/" title="jersey">jersey<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/light/" title="light">light<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/个人博客/" title="个人博客">个人博客<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/编码/" title="编码">编码<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/中文乱码/" title="中文乱码">中文乱码<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/算法/" title="算法">算法<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/quartz/" title="quartz">quartz<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://panpei.net.cn" target="_blank" title="培神的个人网站">crAzyli0n&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jiajixin.cn" target="_blank" title="贾大神的网站">Jason&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://wuchong.me" target="_blank" title="Jark&#39;s Blog">Jark&#39;s Blog</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p>  <br/>
+			当你的才华还撑不起你的野心时，你就应该静下心来学习。</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/wtz123" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/wtz123" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2016 
+		
+		<a href="/about" target="_blank" title="Tony">Tony</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"wtz123"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-62752575-1', 'auto');  
+ga('send', 'pageview');
+</script>
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F6af02e94d74ff35930f2cdd4a4206185' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

@@ -1,0 +1,697 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>netty源码分析 | Tony&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Tony">
+    
+
+    
+    <meta name="description" content="一.netty概述java nio是jdk1.4引入的网络编程API，相比于以前BIO阻塞方式的接口，能大大提高网络通信的效率。
+netty是一个网络通信框架，底层基于java NIO，用来简化NIO编程的开发。因为如果基于NIO直接实现网络编程的开发，比较复杂，很容易出错，而使用了netty之后，只需要关注逻辑处理部分就可以了。此外，netty还提供了多种网络协议的封装。
+Netty4的beta">
+<meta property="og:type" content="article">
+<meta property="og:title" content="netty源码分析">
+<meta property="og:url" content="http://wangtianzhi.cn/2016/02/04/netty-source-analysis/index.html">
+<meta property="og:site_name" content="Tony's blog">
+<meta property="og:description" content="一.netty概述java nio是jdk1.4引入的网络编程API，相比于以前BIO阻塞方式的接口，能大大提高网络通信的效率。
+netty是一个网络通信框架，底层基于java NIO，用来简化NIO编程的开发。因为如果基于NIO直接实现网络编程的开发，比较复杂，很容易出错，而使用了netty之后，只需要关注逻辑处理部分就可以了。此外，netty还提供了多种网络协议的封装。
+Netty4的beta">
+<meta property="og:image" content="/img/netty-channel类图.png">
+<meta property="og:image" content="/img/netty-channelpipeline流程图.png">
+<meta property="og:image" content="/img/netty-handler类图.png">
+<meta property="og:image" content="/img/netty-bytebuffallocator类图.png">
+<meta property="og:image" content="/img/netty-buffer类图.png">
+<meta property="og:image" content="/img/netty-线程模型图.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="netty源码分析">
+<meta name="twitter:description" content="一.netty概述java nio是jdk1.4引入的网络编程API，相比于以前BIO阻塞方式的接口，能大大提高网络通信的效率。
+netty是一个网络通信框架，底层基于java NIO，用来简化NIO编程的开发。因为如果基于NIO直接实现网络编程的开发，比较复杂，很容易出错，而使用了netty之后，只需要关注逻辑处理部分就可以了。此外，netty还提供了多种网络协议的封装。
+Netty4的beta">
+
+    
+    <link rel="alternative" href="/atom.xml" title="Tony&#39;s blog" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/myfavicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/myjacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/myjacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/mylogo.png" alt="Tony&#39;s blog" title="Tony&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Tony&#39;s blog">Tony&#39;s blog</a></h1>
+				<h2 class="blog-motto">Talk is cheap, show me the code.</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:wangtianzhi.cn">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/02/04/netty-source-analysis/" title="netty源码分析" itemprop="url">netty源码分析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="Tony" target="_blank" itemprop="author">Tony</a>
+		
+  <p class="article-time">
+    <time datetime="2016-02-04T13:39:19.000Z" itemprop="datePublished"> 发表于 2016-02-04</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#一-netty概述"><span class="toc-number">1.</span> <span class="toc-text">一.netty概述</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#二-channel和channelPipeline"><span class="toc-number">2.</span> <span class="toc-text">二.channel和channelPipeline</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#三-handler"><span class="toc-number">3.</span> <span class="toc-text">三.handler</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#四-buffer"><span class="toc-number">4.</span> <span class="toc-text">四.buffer</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#五-netty线程模型"><span class="toc-number">5.</span> <span class="toc-text">五.netty线程模型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#六-参考文献"><span class="toc-number">6.</span> <span class="toc-text">六.参考文献</span></a></li></ol>
+		
+		</div>
+		
+		<h4 id="一-netty概述">一.netty概述</h4><p>java nio是jdk1.4引入的网络编程API，相比于以前BIO阻塞方式的接口，能大大提高网络通信的效率。</p>
+<p>netty是一个网络通信框架，底层基于java NIO，用来简化NIO编程的开发。因为如果基于NIO直接实现网络编程的开发，比较复杂，很容易出错，而使用了netty之后，只需要关注逻辑处理部分就可以了。此外，netty还提供了多种网络协议的封装。</p>
+<p>Netty4的beta3加了AIO了,但是到beta9又去掉了,作者的意思是测试下来AIO性能不如NIO,所以没必要用。</p>
+<p>NIO和AIO在linux中底层都是依赖于epoll来实现的。NIO的模型应该为同步非阻塞，AIO为异步非阻塞。底层的具体实现可以参考前面的文章。</p>
+<p>本文基于netty4.0源码来分析netty的网络通信模型。</p>
+<h4 id="二-channel和channelPipeline">二.channel和channelPipeline</h4><p>在Netty里，Channel是通讯的载体，而ChannelHandler负责Channel中的逻辑处理,channelPipeline可以理解为channel的载体，每个channel都有一个对应的ChannelPipeline。</p>
+<p>一个channel包括一个pipeline、TCP参数、一个unsafe等，netty4的channel类图如下所示：<br><img src="/img/netty-channel类图.png" alt="netty4的channel类图"></p>
+<p>按IO类型可以分为:BIO和NIO。<br>按数据类型可以分为:byte,message。<br>按所处位置可以分为:ServerSocket,Socket。用的比较多的为NioServerSocketChannel和NioSocketChannel。</p>
+<p>NioServerSocketChannel继承了AbstractNioMessageChannel，而NioSocketChannel继承了AbstractNioByteChannel。</p>
+<p>netty通过一序列的ChannelHandler来处理一个任务，比如read一条消息后，需要decode、验证、计算等各个步骤。在handler中，每个步骤可以写成一个handler。这一序列的handler通过ChannelPipeline串联起来，其实就是Intercepting Filter模式。</p>
+<p>ChannelPipeline通过一个双向链表将handler连接起来，在ChannelPipeline里有headContext和tailContext两个handler，来分别表示链表的头和尾，通过ChannelPipeline来控制消息的处理流程。</p>
+<p>一个IO事件会被ChannelInboundHandler或ChannelOutboundHandler处理，这些handler再通过调用事件传播方法如fireChannelRegistered或bind等传递给相邻的handler，其实就是事件驱动的思想。</p>
+<p>Netty的ChannelPipeline包含两条线路：inbound和outbound。inbound表示接收到消息、被动的消息，outbound表示发送的消息、主动的状态改变。一个handler可以包括inbound和outbound的一种或两种。</p>
+<p>inbound的事件传播方法包括以下几种情况：</p>
+<blockquote>
+<p>fireChannelRegistered<br>fireChannelActive<br>fireChannelRead<br>fireChannelReadComplete<br>fireExceptionCaught<br>fireUserEventTriggered<br>fireChannelWritabilityChanged<br>fireChannelInactive<br>fireChannelUnregistered</p>
+</blockquote>
+<p>outbound的事件传播方法包括以下几种情况：  </p>
+<blockquote>
+<p>bind<br>connect<br>write<br>flush<br>read<br>disconnect<br>close<br>deregister</p>
+</blockquote>
+<p>例如，有一个称为p的ChannelPipeline,添加了如下的handler:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">p.addLast(<span class="string">"1"</span>, <span class="keyword">new</span> InboundHandlerA());  </span><br><span class="line">p.addLast(<span class="string">"2"</span>, <span class="keyword">new</span> InboundHandlerB());  </span><br><span class="line">p.addLast(<span class="string">"3"</span>, <span class="keyword">new</span> OutboundHandlerA());  </span><br><span class="line">p.addLast(<span class="string">"4"</span>, <span class="keyword">new</span> OutboundHandlerB());  </span><br><span class="line">p.addLast(<span class="string">"5"</span>, <span class="keyword">new</span> InboundOutboundHandlerX());</span><br></pre></td></tr></table></figure>
+<p>则现在的链表结构为：head&lt;-&gt;5&lt;-&gt;4&lt;-&gt;3&lt;-&gt;2&lt;-&gt;1&lt;-&gt;tail （注意，每次添加handler都是插入到tail的前面），inbound的执行顺序为5、2、1，而outbound的执行顺序为3、4、5.</p>
+<p>下图为从源码注解截取的pipeline流程图：<br><img src="/img/netty-channelpipeline流程图.png" alt="pipeline传播流程"></p>
+<h4 id="三-handler">三.handler</h4><p>handler的类图如下所示：<br><img src="/img/netty-handler类图.png" alt="netty4的handler类图"><br>HeadContext和TailContext为pipeline的handler链表中的表头和表尾。此外，netty还提供了很多协议（如protobuf、mqtt、socks等等）的handler用来处理encode、decode等的功能。</p>
+<h4 id="四-buffer">四.buffer</h4><p>buffer的缓存分配器和buffer类图如下所示：<br><img src="/img/netty-bytebuffallocator类图.png" alt="netty4的ByteBuffAllocator"><br><img src="/img/netty-buffer类图.png" alt="netty4的buffer类图"></p>
+<p>除了可分配定长的buffer外，netty还提供了AdaptiveRecvByteBufAllocator，用来根据本次读取的字节数对下次缓冲接收区的容量进行动态的分配。具体如何分配可参考参考文献3的文档。为了提高效率，netty还提供了基于内存池的缓冲区重用策略（可参考<a href="http://www.infoq.com/cn/articles/netty-high-performance" target="_blank" rel="external">Netty系列之Netty高性能之道</a>一文）。</p>
+<p>此外，netty还采用了”Zero-Copy-Capable”机制。我们知道一个报文在网络上传输有可能被拆分成多个，这些被拆分的报文对接收到的上层的逻辑是没有意义的，在netty中，通过将这些buffer组合起来，成为一个channelbuffer，变成一个有意义的报文。当然，zero-copy的含义不止这个，netty的zero-copy机制的具体体现参见李林锋大神的<a href="http://www.infoq.com/cn/articles/netty-high-performance" target="_blank" rel="external">Netty系列之Netty高性能之道</a>一文。如果说NIO的Buffer和Netty的ChannelBuffer最大的区别的话，就是前者仅仅是传输上的Buffer，而后者其实是传输Buffer和抽象后的逻辑Buffer的结合。</p>
+<p>例如CompositeChannelBuffer是由多个ChannelBuffer组合而成的，CompositeChannelBuffer并不会开辟新的内存并直接复制所有ChannelBuffer内容，而是直接保存了所有ChannelBuffer的引用，并在子ChannelBuffer里进行读写。当然，要真正zero-copy可能要底层系统支持，下文是stackoverflow上的关于OS级别的zero-copy和netty的区别：</p>
+<blockquote>
+<p>OS-level zero copy involves avoiding copying memory blocks from one location to another (typically from user space to kernel space) before sending data to the hardware driver (network card or disk drive) or vice versa.  </p>
+<p>Netty zero copy is talking about optimizing data manipulation on Java level (user-space only). Their ChannelBuffer allows to read contents of multiple byte buffers without actually copying their content.</p>
+<p>In other words, while Netty works only in user space, it is still valid to call their approach “zero copy”.<br>However, if OS does not use or support true zero copy, it is possible that when data created by Netty-powered program will be sent over the network, data would still be copied from user space to kernel space, and thus true zero-copy would not be achieved.</p>
+</blockquote>
+<h4 id="五-netty线程模型">五.netty线程模型</h4><p>对于应用服务器，一个主要规律就是，CPU的处理速度是要远远快于IO速度的，如果CPU为了IO操作（例如从Socket读取一段数据）而阻塞显然是不划算的。好一点的方法是分为多进程或者线程去进行处理，但是这样会带来一些进程切换的开销。应用业务向一个中间人注册一个回调（event handler），当IO就绪后，就这个中间人产生一个事件，并通知此handler进行处理。这种回调的方式，也体现了“好莱坞原则”（Hollywood principle）-“Don’t call us, we’ll call you”。</p>
+<p>我们如何知道IO就绪这个事件，谁来充当这个中间人？<strong>Reactor</strong>模式的答案是：由一个不断等待和循环的单独进程（线程）来做这件事，它接受所有handler的注册，并负责先操作系统查询IO是否就绪，在就绪后就调用指定handler进行处理，这个角色的名字就叫做Reactor。在NIO中Reactor的核心是Selector。</p>
+<p>Reactor模式里，操作系统只负责通知IO就绪，具体的IO操作（例如读写）仍然是要在业务进程里阻塞的去做的，而<strong>Proactor</strong>模式则更进一步，由操作系统将IO操作执行好（例如读取，会将数据直接读到内存buffer中），而handler只负责处理自己的逻辑，真正做到了IO与程序处理异步执行。所以我们一般又说Reactor是同步IO，Proactor是异步IO。</p>
+<p>如下是netty4.0源码的一个server端的例子（EchoServer）：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">EventLoopGroup bossGroup = <span class="keyword">new</span> NioEventLoopGroup(<span class="number">1</span>);</span><br><span class="line">EventLoopGroup workerGroup = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    ServerBootstrap b = <span class="keyword">new</span> ServerBootstrap();</span><br><span class="line">	b.group(bossGroup, workerGroup)</span><br><span class="line">	 .channel(NioServerSocketChannel.class)</span><br><span class="line">	 .option(ChannelOption.SO_BACKLOG, <span class="number">100</span>)</span><br><span class="line">	 .handler(<span class="keyword">new</span> LoggingHandler(LogLevel.INFO))</span><br><span class="line">	 .childHandler(<span class="keyword">new</span> ChannelInitializer&lt;SocketChannel&gt;() &#123;</span><br><span class="line">		 <span class="annotation">@Override</span></span><br><span class="line">		 <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(SocketChannel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">			 ChannelPipeline p = ch.pipeline();</span><br><span class="line">			 <span class="keyword">if</span> (sslCtx != <span class="keyword">null</span>) &#123;</span><br><span class="line">				 p.addLast(sslCtx.newHandler(ch.alloc()));</span><br><span class="line">			 &#125;</span><br><span class="line">			 <span class="comment">//p.addLast(new LoggingHandler(LogLevel.INFO));</span></span><br><span class="line">			 p.addLast(<span class="keyword">new</span> EchoServerHandler());</span><br><span class="line">		 &#125;</span><br><span class="line">	 &#125;);</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Start the server.</span></span><br><span class="line">	ChannelFuture f = b.bind(PORT).sync();</span><br><span class="line">	<span class="comment">// Wait until the server socket is closed.</span></span><br><span class="line">	f.channel().closeFuture().sync();</span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">	<span class="comment">// Shut down all event loops to terminate all threads.</span></span><br><span class="line">	bossGroup.shutdownGracefully();</span><br><span class="line">	workerGroup.shutdownGracefully();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>下面是client端的例子：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Configure the client.</span></span><br><span class="line">EventLoopGroup group = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">	Bootstrap b = <span class="keyword">new</span> Bootstrap();</span><br><span class="line">	b.group(group)</span><br><span class="line">	 .channel(NioSocketChannel.class)</span><br><span class="line">	 .option(ChannelOption.TCP_NODELAY, <span class="keyword">true</span>)</span><br><span class="line">	 .handler(<span class="keyword">new</span> ChannelInitializer&lt;SocketChannel&gt;() &#123;</span><br><span class="line">		 <span class="annotation">@Override</span></span><br><span class="line">		 <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(SocketChannel ch)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">			 ChannelPipeline p = ch.pipeline();</span><br><span class="line">			 <span class="keyword">if</span> (sslCtx != <span class="keyword">null</span>) &#123;</span><br><span class="line">				 p.addLast(sslCtx.newHandler(ch.alloc(), HOST, PORT));</span><br><span class="line">			 &#125;</span><br><span class="line">			 <span class="comment">//p.addLast(new LoggingHandler(LogLevel.INFO));</span></span><br><span class="line">			 p.addLast(<span class="keyword">new</span> EchoClientHandler());</span><br><span class="line">		 &#125;</span><br><span class="line">	 &#125;);</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Start the client.</span></span><br><span class="line">	ChannelFuture f = b.connect(HOST, PORT).sync();</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Wait until the connection is closed.</span></span><br><span class="line">	f.channel().closeFuture().sync();</span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">	<span class="comment">// Shut down the event loop to terminate all threads.</span></span><br><span class="line">	group.shutdownGracefully();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>在server端，可以看到有两个NioEventLoopGroup，这两个其实就是两组线程组，称为boss和worker。boss和worker里面都可以包含多个NioEventLoop线程，一般boss设置1个线程就够了，一个线程绑定一个端口，而worker默认的线程数量为cpu个数的2倍。每个EventLoop线程有一个selector和queue,该线程会轮询绑定到此selector的channel，收到绑定的事件后，会触发发事件通知handler处理。</p>
+<p>在初始化时，会将NioServerSocketChannel放进boss线程池中的一个eventLoop线程，让eventLoop关联的select轮询，处理client的connect。boss负责接收connect，接收到connect后，new一个NioSocketChannel，并放进worker的一个线程中，让对应的selector轮询处理read、write等操作。</p>
+<p>线程模型如下图所示：<br><img src="/img/netty-线程模型图.png" alt="netty4线程模型"><br>注：一个channel包含一个pipeline、TCP参数、unsafe等，一个worker包含多个EventLoop线程，一个EventLoop包含一个selector、一个queue。</p>
+<p>上述只是netty常用的一种线程模型，netty可以根据不同的配置，演变出其他的线程模型（可以参考<a href="http://www.infoq.com/cn/articles/netty-high-performance" target="_blank" rel="external">Netty系列之Netty高性能之道</a>一文）。</p>
+<p>此外，netty还采用了很多方法来提高netty的性能，如高效的并发编程、高性能的序列化框架、灵活的TCP参数配置能力等。</p>
+<p>下面附上网上一个大神(<a href="http://xw-z1985.iteye.com/blog/1973205" target="_blank" rel="external">海浪儿</a>)总结的上文所述例子的执行过程，具体源码的解析可以参考参考文献2.</p>
+<blockquote>
+<p><strong>服务端依次发生的步骤</strong>  </p>
+<ol>
+<li>建立服务端监听套接字ServerSocketChannel，以及对应的管道pipeline；  </li>
+<li>启动boss线程，将ServerSocketChannel注册到boss线程持有的selector中，并将注册返回的selectionKey赋值给ServerSocketChannel关联的selectionKey变量；  </li>
+<li>在ServerSocketChannel对应的管道中触发channelRegistered事件；  </li>
+<li>绑定IP和端口  </li>
+<li>触发channelActive事件，并将ServerSocketChannel关联的selectionKey的OP_ACCEPT位置为1。  </li>
+<li>客户端发起connect请求后，boss线程正在运行的select循环检测到了该ServerSocketChannel的ACCEPT事件就绪，则通过accept系统调用建立一个已连接套接字SocketChannel，并为其创建对应的管道；  </li>
+<li>在服务端监听套接字对应的管道中触发channelRead事件；  </li>
+<li>channelRead事件由ServerBootstrapAcceptor的channelRead方法响应：为已连接套接字对应的管道加入ChannelInitializer处理器；启动一个worker线程，并将已连接套接字的注册任务加入到worker线程的任务队列中；  </li>
+<li>worker线程执行已连接套接字的注册任务：将已连接套接字注册到worker线程持有的selector中，并将注册返回的selectionKey赋值给已连接套接字关联的selectionKey变量；在已连接套接字对应的管道中触发channelRegistered事件；channelRegistered事件由ChannelInitializer的channelRegistered方法响应：将自定义的处理器（譬如EchoServerHandler）加入到已连接套接字对应的管道中；在已连接套接字对应的管道中触发channelActive事件；channelActive事件由已连接套接字对应的管道中的inbound处理器的channelActive方法响应；将已连接套接字关联的selectionKey的OP_READ位置为1；至此，worker线程关联的selector就开始监听已连接套接字的READ事件了。  </li>
+<li>在worker线程运行的同时，Boss线程接着在服务端监听套接字对应的管道中触发channelReadComplete事件。  </li>
+<li>客户端向服务端发送消息后，worker线程正在运行的selector循环会检测到已连接套接字的READ事件就绪。则通过read系统调用将消息从套接字的接受缓冲区中读到AdaptiveRecvByteBufAllocator（可以自适应调整分配的缓存的大小）分配的缓存中；  </li>
+<li>在已连接套接字对应的管道中触发channelRead事件；  </li>
+<li>channelRead事件由EchoServerHandler处理器的channelRead方法响应：执行write操作将消息存储到ChannelOutboundBuffer中；  </li>
+<li>在已连接套接字对应的管道中触发ChannelReadComplete事件；  </li>
+<li>ChannelReadComplete事件由EchoServerHandler处理器的channelReadComplete方法响应：执行flush操作将消息从ChannelOutboundBuffer中flush到套接字的发送缓冲区中；  </li>
+</ol>
+<p><strong>客户端依次发生的步骤</strong>  </p>
+<ol>
+<li>建立套接字SocketChannel，以及对应的管道pipeline；  </li>
+<li>启动客户端线程，将SocketChannel注册到客户端线程持有的selector中，并将注册返回的selectionKey赋值给SocketChannel关联的selectionKey变量；  </li>
+<li>触发channelRegistered事件；  </li>
+<li>channelRegistered事件由ChannelInitializer的channelRegistered方法响应：将客户端自定义的处理器（譬如EchoClientHandler）按顺序加入到管道中；  </li>
+<li>向服务端发起connect请求，并将SocketChannel关联的selectionKey的OP_CONNECT位置为1；  </li>
+<li>开始三次握手，客户端线程正在运行的select循环检测到了该SocketChannel的CONNECT事件就绪，则将关联的selectionKey的OP_CONNECT位置为0，再通过调用finishConnect完成连接的建立；  </li>
+<li>触发channelActive事件；  </li>
+<li>channelActive事件由EchoClientHandler的channelActive方法响应，通过调用ctx.writeAndFlush方法将消息发往服务端；  </li>
+<li>首先将消息存储到ChannelOutboundBuffer中；（如果ChannelOutboundBuffer存储的所有未flush的消息的大小超过高水位线writeBufferHighWaterMark（默认值为64 * 1024），则会触发ChannelWritabilityChanged事件）  </li>
+<li>然后将消息从ChannelOutboundBuffer中flush到套接字的发送缓冲区中；（如果ChannelOutboundBuffer存储的所有未flush的消息的大小小于低水位线，则会触发ChannelWritabilityChanged事件）  </li>
+</ol>
+</blockquote>
+<h4 id="六-参考文献">六.参考文献</h4><ol>
+<li>netty源码解析 <a href="https://github.com/code4craft/netty-learning" target="_blank" rel="external">https://github.com/code4craft/netty-learning</a>  </li>
+<li><strong>netty4.x源码分析</strong> <a href="http://xw-z1985.iteye.com/blog/1918052" target="_blank" rel="external">http://xw-z1985.iteye.com/blog/1918052</a>  </li>
+<li>Netty5.0架构剖析和源码解读 <a href="http://vdisk.weibo.com/s/C9LV9iVqH13rW/1391437855" target="_blank" rel="external">http://vdisk.weibo.com/s/C9LV9iVqH13rW/1391437855</a>  </li>
+<li>netty user guide <a href="http://netty.io/wiki/user-guide-for-4.x.html" target="_blank" rel="external">http://netty.io/wiki/user-guide-for-4.x.html</a></li>
+<li><strong>Netty系列之Netty高性能之道</strong> <a href="http://www.infoq.com/cn/articles/netty-high-performance" target="_blank" rel="external">http://www.infoq.com/cn/articles/netty-high-performance</a></li>
+<li>《netty权威指南》-李林锋</li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/netty/">netty</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/NIO/">NIO</a><a href="/tags/netty/">netty</a><a href="/tags/网络/">网络</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://wangtianzhi.cn/2016/02/04/netty-source-analysis/" data-title="netty源码分析 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/01/25/unix-io-mode/"  title="UNIX IO模型">
+ <strong>下一篇：</strong><br/> 
+ <span>UNIX IO模型
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/02/04/netty-source-analysis/" data-title="netty源码分析" data-url="http://wangtianzhi.cn/2016/02/04/netty-source-analysis/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#一-netty概述"><span class="toc-number">1.</span> <span class="toc-text">一.netty概述</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#二-channel和channelPipeline"><span class="toc-number">2.</span> <span class="toc-text">二.channel和channelPipeline</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#三-handler"><span class="toc-number">3.</span> <span class="toc-text">三.handler</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#四-buffer"><span class="toc-number">4.</span> <span class="toc-text">四.buffer</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#五-netty线程模型"><span class="toc-number">5.</span> <span class="toc-text">五.netty线程模型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#六-参考文献"><span class="toc-number">6.</span> <span class="toc-text">六.参考文献</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+		
+		  
+			<li><a href="/categories/Linux/" title="Linux">Linux<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/netty/" title="netty">netty<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/web开发/" title="web开发">web开发<sup>2</sup></a></li>
+		  
+		
+		  
+		
+		  
+			<li><a href="/categories/操作系统/" title="操作系统">操作系统<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据库/" title="数据库">数据库<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/杂文/" title="杂文">杂文<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JAX-RS/" title="JAX-RS">JAX-RS<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/网络/" title="网络">网络<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/REST/" title="REST">REST<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/策略模式/" title="策略模式">策略模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/strategy/" title="strategy">strategy<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/quartz/" title="quartz">quartz<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/源码分析/" title="源码分析">源码分析<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/分区/" title="分区">分区<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/grub/" title="grub">grub<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/启动项/" title="启动项">启动项<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/netty/" title="netty">netty<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jersey/" title="jersey">jersey<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/事务/" title="事务">事务<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/ACID/" title="ACID">ACID<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IO/" title="IO">IO<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/light/" title="light">light<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/NIO/" title="NIO">NIO<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://panpei.net.cn" target="_blank" title="培神的个人网站">crAzyli0n&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jiajixin.cn" target="_blank" title="贾大神的网站">Jason&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://wuchong.me" target="_blank" title="Jark&#39;s Blog">Jark&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://hedengcheng.com" target="_blank" title="数据库大神">何登成的技术博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm-blog.aliapp.com" target="_blank" title="阿里中间件">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://tech.meituan.com" target="_blank" title="美图点评技术团队">美图点评技术团队</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="https://www.ibm.com/developerworks/cn/" target="_blank" title="IBM developerworks">IBM developerworks</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p>  <br/>
+			当你的才华还撑不起你的野心时，你就应该静下心来学习。</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/wtz123" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/wtz123" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2016 
+		
+		<a href="/about" target="_blank" title="Tony">Tony</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"wtz123"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-62752575-1', 'auto');  
+ga('send', 'pageview');
+</script>
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F6af02e94d74ff35930f2cdd4a4206185' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

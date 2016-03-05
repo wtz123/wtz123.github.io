@@ -1,0 +1,683 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>web与spring初始化过程分析 | Tony&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="Tony">
+    
+
+    
+    <meta name="description" content="一.总体初始化流程web.xml加载顺序，context-param -&amp;gt; listener -&amp;gt; filter -&amp;gt; servlet；
+
+启动一个WEB项目的时候，WEB容器会去读取它的配置文件web.xml，读取和两个结点；
+
+紧接着，容器创建一个ServletContext（servlet上下文），这个web项目的所有部分都将共享这个上下文；
+
+容器将转换为键值对，并交给s">
+<meta property="og:type" content="article">
+<meta property="og:title" content="web与spring初始化过程分析">
+<meta property="og:url" content="http://wangtianzhi.cn/2016/03/03/web-init-process/index.html">
+<meta property="og:site_name" content="Tony's blog">
+<meta property="og:description" content="一.总体初始化流程web.xml加载顺序，context-param -&amp;gt; listener -&amp;gt; filter -&amp;gt; servlet；
+
+启动一个WEB项目的时候，WEB容器会去读取它的配置文件web.xml，读取和两个结点；
+
+紧接着，容器创建一个ServletContext（servlet上下文），这个web项目的所有部分都将共享这个上下文；
+
+容器将转换为键值对，并交给s">
+<meta property="og:image" content="/img/web-init-process/spring-start-up.png">
+<meta property="og:image" content="/img/web-init-process/spring-applicationcontext-diagram.png">
+<meta property="og:image" content="/img/web-init-process/dispatcherServlet类继承图.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="web与spring初始化过程分析">
+<meta name="twitter:description" content="一.总体初始化流程web.xml加载顺序，context-param -&amp;gt; listener -&amp;gt; filter -&amp;gt; servlet；
+
+启动一个WEB项目的时候，WEB容器会去读取它的配置文件web.xml，读取和两个结点；
+
+紧接着，容器创建一个ServletContext（servlet上下文），这个web项目的所有部分都将共享这个上下文；
+
+容器将转换为键值对，并交给s">
+
+    
+    <link rel="alternative" href="/atom.xml" title="Tony&#39;s blog" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/myfavicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/myjacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/myjacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/mylogo.png" alt="Tony&#39;s blog" title="Tony&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Tony&#39;s blog">Tony&#39;s blog</a></h1>
+				<h2 class="blog-motto">Talk is cheap, show me the code.</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:wangtianzhi.cn">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/03/03/web-init-process/" title="web与spring初始化过程分析" itemprop="url">web与spring初始化过程分析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="Tony" target="_blank" itemprop="author">Tony</a>
+		
+  <p class="article-time">
+    <time datetime="2016-03-03T13:58:40.000Z" itemprop="datePublished"> 发表于 2016-03-03</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#一-总体初始化流程"><span class="toc-number">1.</span> <span class="toc-text">一.总体初始化流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#二-详细解析"><span class="toc-number">2.</span> <span class="toc-text">二.详细解析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-Spring-ContextLoaderListener"><span class="toc-number">2.1.</span> <span class="toc-text">1.Spring-ContextLoaderListener</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-SpringMVC-DispatcherServlet"><span class="toc-number">2.2.</span> <span class="toc-text">2.SpringMVC-DispatcherServlet</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-Spring-RequestContextListener"><span class="toc-number">2.3.</span> <span class="toc-text">3.Spring-RequestContextListener</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#4-其它的一些类"><span class="toc-number">2.4.</span> <span class="toc-text">4.其它的一些类</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#三-_参考文献"><span class="toc-number">3.</span> <span class="toc-text">三. 参考文献</span></a></li></ol>
+		
+		</div>
+		
+		<h3 id="一-总体初始化流程">一.总体初始化流程</h3><p>web.xml加载顺序，context-param -&gt; listener -&gt; filter -&gt; servlet；</p>
+<ol>
+<li><p>启动一个WEB项目的时候，WEB容器会去读取它的配置文件web.xml，读取<listener>和<context-param>两个结点；</context-param></listener></p>
+</li>
+<li><p>紧接着，容器创建一个ServletContext（servlet上下文），这个web项目的所有部分都将共享这个上下文；</p>
+</li>
+<li><p>容器将<context-param>转换为键值对，并交给servletContext；</context-param></p>
+</li>
+<li><p>容器创建<listener>中的类实例，创建监听器。（如spring的ContextLoadListener、RequestContextListener、Log4jConfigListener等）（ContextLoadListener实例化Ioc容器，根据条件决定是否此时实例化bean，如lazy-init,scope等参数）；</listener></p>
+</li>
+<li><p>构建filter链（如CharacterEncodingFilter、OpenSessionInViewFilter、struts2的StrutsPrepareFilter、StrutsExecuteFilter等）；</p>
+</li>
+</ol>
+<p>注意：<strong>servlet是单实例多线程；spring bean默认也是单实例的，不过可以通过scope参数来设置为别的；struts2中action是多例的</strong>。另外，本文基于spring3.2.2源码来分析的。</p>
+<h3 id="二-详细解析">二.详细解析</h3><p><strong>servlet、listener、filter的关键方法</strong></p>
+<p><strong>Servlet</strong><br>-init(ServletConfig config)<br>-service(ServletRequest req, ServletResponse res)<br>//service再根据请求类型调用doGet、doPost等方法<br>-destroy()</p>
+<p><strong>Listener</strong><br>ServletContextListener<br>-contextInitialized ( ServletContextEvent sce )<br>-contextDestroyed ( ServletContextEvent sce )<br>ServletRequestListener<br>-requestInitialized(ServletRequestEvent requestEvent)<br>-requestDestroyed(ServletRequestEvent requestEvent)</p>
+<p><strong>Filter</strong><br>-init(FilterConfig filterConfig)<br>-destroy()<br>-doFilter(ServletRequest request, ServletResponse response, FilterChain chain)  </p>
+<h4 id="1-Spring-ContextLoaderListener">1.Spring-ContextLoaderListener</h4><p><code>ContextLoaderListener</code>作用就是启动Web容器时，自动装配spring的配置文件的配置信息；<br><code>ContextLoaderServlet</code>:与ContextLoaderListener功能一样；</p>
+<p>ContextLoaderListener它继承了<code>javax.servlet.ServletContextListener</code>接口。ServletContextListener是J2EE Servlet API中的一个标准接口，它能够监听ServletContext对象的生命周期，实际上就是监听Web应用的生命周期。当Servlet容器<strong>启动或终止</strong>Web应用时，会触发ServletContextEvent事件，该事件由ServletContextListener来处理。</p>
+<p>Ioc容器实例化流程如图所示：<br><img src="/img/web-init-process/spring-start-up.png" alt="ContextLoaderListener初始化调用流程"><br>实例化Spring IoC容器的过程中，最主要的两个方法是<code>createWebApplicationContext</code>和<code>configureAndRefreshWebApplicationContext</code>方法。</p>
+<p><code>createWebApplicationContext</code>方法用于返回XmlWebApplicationContext实例，即Web环境下的Spring IoC容器。</p>
+<p><code>configureAndRefreshWebApplicationContext</code>用于配置XmlWebApplicationContext，读取web.xml中通过<code>contextConfigLocation</code>标签指定的XML文件，实例化XML文件中配置的bean，并在上一步中实例化的容器中进行注册。</p>
+<p>完成以上两步的操作后，Spring MVC会将XmlWebApplicationContext实例以属性的方式注册到ServletContext中。此Spring 容器是ROOT上下文，供所有的Spring MVC Servlcet使用。<br>核心的初始化逻辑都在AbstractApplicationContext的<code>refresh()</code>方法里：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">refresh</span><span class="params">()</span></span>&#123;</span><br><span class="line"><span class="comment">// Prepare this context for refreshing.</span></span><br><span class="line">prepareRefresh();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Tell the subclass to refresh the internal bean factory.</span></span><br><span class="line">ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Prepare the bean factory for use in this context.</span></span><br><span class="line">prepareBeanFactory(beanFactory);</span><br><span class="line"><span class="comment">// 注册实现了BeanPostProcessor接口的bean</span></span><br><span class="line">postProcessBeanFactory(beanFactory);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 初始化和执行BeanFactoryPostProcessor beans</span></span><br><span class="line">invokeBeanFactoryPostProcessors(beanFactory);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 初始化和执行BeanPostProcessor beans</span></span><br><span class="line">registerBeanPostProcessors(beanFactory);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Initialize message source for this context.</span></span><br><span class="line">initMessageSource();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Initialize event multicaster for this context.</span></span><br><span class="line">initApplicationEventMulticaster();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Initialize other special beans in specific context subclasses.</span></span><br><span class="line">onRefresh();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Check for listener beans and register them.</span></span><br><span class="line">registerListeners();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 实例化non-lazy-init的单例bean.</span></span><br><span class="line">finishBeanFactoryInitialization(beanFactory);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Last step: publish corresponding event.</span></span><br><span class="line">finishRefresh();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>obtainFreshBeanFactory()方法会刷新所有BeanFactory子容器，在此会<strong>加载、解析Bean</strong>的定义。<br>finishBeanFactoryInitialization()方法用来<strong>实例化bean</strong>。</p>
+<p><strong>bean实例化时机：</strong><br>若是单例、lazy-init=false且不是抽象类，则实例化,否则等到执行时才实例化；实例化中若有依赖别的bean，需要先实例化依赖的bean。<br>具体代码逻辑在<code>DefaultListableBeanFactory</code>的<code>preInstantiateSingletons()</code>和<code>AbstractBeanFactory</code>的<code>doGetBean()</code>，可以参考<a href="http://www.ibm.com/developerworks/cn/java/j-lo-spring-principle/" target="_blank" rel="external">Spring 框架的设计理念与设计模式分析</a>。</p>
+<p><strong>ApplicationContext vs BeanFactory</strong><br>ApplicationContext的类继承关系如图所示：<br><img src="/img/web-init-process/spring-applicationcontext-diagram.png" alt="ApplicationContext类继承关系"><br><code>ApplicationContext</code> 由BeanFactory 派生而来，提供了更多面向实际应用的功能。几乎所有的应用场合我们都直接使用<code>ApplicationContext</code> 而非底层的BeanFactory。在BeanFactory 中，很多功能需要以编程的方式实现，而在ApplicationContext中则可以通过配置的方式实现。</p>
+<p>ApplicationContext的主要实现类是<code>ClassPathXmlApplicationContext</code> 和<code>FileSystemXmlApplicationContext</code>，前者默认从类路径加载配置文件，后者默认从文件系统中装载配置文件。</p>
+<p><code>WebApplicationContext</code> 是专门为Web 应用准备的，WebApplicationContext 扩展了ApplicationContext。<br>Spring 分别提供了用于启动WebApplicationContext 的Servlet 和Web 容器监听器：</p>
+<blockquote>
+<p>org.springframework.web.context.ContextLoaderServlet；<br>org.springframework.web.context.ContextLoaderListener;</p>
+</blockquote>
+<p>两者的内部都实现了启动WebApplicationContext 实例的逻辑，我们只要根据Web 容器的具体情况选择两者之一，并在web.xml 中完成配置就可以了。  </p>
+<h4 id="2-SpringMVC-DispatcherServlet">2.SpringMVC-DispatcherServlet</h4><p>DispatcherServlet配置在web.xml中，是springmvc的入口，它的继承关系图如下图所示：<br><img src="/img/web-init-process/dispatcherServlet类继承图.png" alt="DispatcherServlet类继承图"></p>
+<ol>
+<li>HttpServletBean继承HttpServlet，因此在Web容器启动时将调用它的init方法，该初始化方法的主要作用：<br>a. 将Servlet初始化参数（init-param）设置到该组件上（如contextAttribute、contextClass、namespace、contextConfigLocation），通过BeanWrapper简化设值过程，方便后续使用；<br>b. 提供给子类初始化扩展点，initServletBean()，该方法由FrameworkServlet覆盖。</li>
+<li>FrameworkServlet继承HttpServletBean，通过initServletBean()进行Web上下文初始化，该方法主要覆盖一下两件事情：<br>a. 初始化web上下文；<br>b. 提供给子类初始化扩展点；</li>
+<li>DispatcherServlet继承FrameworkServlet，并实现了onRefresh()方法提供一些前端控制器相关的配置：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DispatcherServlet</span> <span class="keyword">extends</span> <span class="title">FrameworkServlet</span> </span>&#123;</span><br><span class="line"><span class="comment">//实现子类的onRefresh()方法，该方法委托为initStrategies()方法。</span></span><br><span class="line"><span class="annotation">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onRefresh</span><span class="params">(ApplicationContext context)</span> </span>&#123;</span><br><span class="line">initStrategies(context);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>//初始化默认的Spring Web MVC框架使用的策略（如HandlerMapping）<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initStrategies</span><span class="params">(ApplicationContext context)</span> </span>&#123;</span><br><span class="line">initMultipartResolver(context);</span><br><span class="line">initLocaleResolver(context);</span><br><span class="line">initThemeResolver(context);</span><br><span class="line">initHandlerMappings(context);</span><br><span class="line">initHandlerAdapters(context);</span><br><span class="line">initHandlerExceptionResolvers(context);</span><br><span class="line">initRequestToViewNameTranslator(context);</span><br><span class="line">initViewResolvers(context);</span><br><span class="line">initFlashMapManager(context);</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>从如上代码可以看出，DispatcherServlet启动时会进行我们需要的Web层Bean的配置，如HandlerMapping、HandlerAdapter等，而且如果我们没有配置，还会给我们提供默认的配置。</p>
+<p>从如上代码我们可以看出，整个DispatcherServlet初始化的过程和做了些什么事情，具体主要做了如下两件事情：</p>
+<ol>
+<li>初始化Spring Web MVC使用的Web上下文，并且可能指定父容器为（ContextLoaderListener加载了根上下文）；</li>
+<li>初始化DispatcherServlet使用的策略，如HandlerMapping、HandlerAdapter等。</li>
+</ol>
+<h4 id="3-Spring-RequestContextListener">3.Spring-RequestContextListener</h4><p>ContextLoaderListener实现ServletContextListener监听器接口，而ServletContextListener只负责监听Web容器的启动和关闭的事件。RequestContextListener实现ServletRequestListener监听器接口，该监听器监听HTTP请求事件，Web服务器接收的每次请求都会通知该监听器。</p>
+<h4 id="4-其它的一些类">4.其它的一些类</h4><p>1）CharacterEncodingFilter：字符编码转换filter，这个filter一定要注意顺序，要放在其它filter前面，要不然可能不起作用；</p>
+<p>2） OpenSessionInViewFilter：主要功能是用来把一个Hibernate Session和一次完整的请求过程对应的线程相绑定。跟延迟加载相关。</p>
+<p>3） Struts2的入口：StrutsPrepareFilter、StrutsExecuteFilter、StrutsListener</p>
+<h3 id="三-_参考文献">三. 参考文献</h3><ol>
+<li><a href="http://blog.csdn.net/hongshan50/article/details/7335443" target="_blank" rel="external">web.xml加载顺序</a></li>
+<li><a href="http://www.ibm.com/developerworks/cn/java/j-lo-spring-principle/" target="_blank" rel="external">Spring 框架的设计理念与设计模式分析</a></li>
+<li><a href="http://www.ibm.com/developerworks/cn/java/j-lo-servlet/" target="_blank" rel="external">Servlet 工作原理解析</a></li>
+<li><a href="http://jinnianshilongnian.iteye.com/blog/1602617" target="_blank" rel="external">第三章 DispatcherServlet详解 ——跟开涛学SpringMVC</a> </li>
+<li>&lt;深入分析JAVA web技术内幕-许令波&gt;</li>
+<li><a href="http://spring.io/docs/" target="_blank" rel="external">spring docs</a></li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/web开发/">web开发</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/spring/">spring</a><a href="/tags/springmvc/">springmvc</a><a href="/tags/web/">web</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://wangtianzhi.cn/2016/03/03/web-init-process/" data-title="web与spring初始化过程分析 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/03/05/springmvc-source-analysis/" title="springMVC源码分析">
+  <strong>上一篇：</strong><br/>
+  <span>
+  springMVC源码分析</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/02/04/netty-source-analysis/"  title="netty源码分析">
+ <strong>下一篇：</strong><br/> 
+ <span>netty源码分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/03/03/web-init-process/" data-title="web与spring初始化过程分析" data-url="http://wangtianzhi.cn/2016/03/03/web-init-process/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#一-总体初始化流程"><span class="toc-number">1.</span> <span class="toc-text">一.总体初始化流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#二-详细解析"><span class="toc-number">2.</span> <span class="toc-text">二.详细解析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-Spring-ContextLoaderListener"><span class="toc-number">2.1.</span> <span class="toc-text">1.Spring-ContextLoaderListener</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-SpringMVC-DispatcherServlet"><span class="toc-number">2.2.</span> <span class="toc-text">2.SpringMVC-DispatcherServlet</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-Spring-RequestContextListener"><span class="toc-number">2.3.</span> <span class="toc-text">3.Spring-RequestContextListener</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#4-其它的一些类"><span class="toc-number">2.4.</span> <span class="toc-text">4.其它的一些类</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#三-_参考文献"><span class="toc-number">3.</span> <span class="toc-text">三. 参考文献</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Linux/" title="Linux">Linux<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/netty/" title="netty">netty<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/web开发/" title="web开发">web开发<sup>4</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/操作系统/" title="操作系统">操作系统<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据库/" title="数据库">数据库<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/数据结构/" title="数据结构">数据结构<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/杂文/" title="杂文">杂文<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/webservice/" title="webservice">webservice<sup>3</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/web/" title="web">web<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/springmvc/" title="springmvc">springmvc<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/网络/" title="网络">网络<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/REST/" title="REST">REST<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JAX-RS/" title="JAX-RS">JAX-RS<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/算法/" title="算法">算法<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/事务/" title="事务">事务<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/ACID/" title="ACID">ACID<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/设计模式/" title="设计模式">设计模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/策略模式/" title="策略模式">策略模式<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/strategy/" title="strategy">strategy<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/quartz/" title="quartz">quartz<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/分区/" title="分区">分区<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/grub/" title="grub">grub<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/启动项/" title="启动项">启动项<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/netty/" title="netty">netty<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/NIO/" title="NIO">NIO<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IO/" title="IO">IO<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://panpei.net.cn" target="_blank" title="培神的个人网站">crAzyli0n&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jiajixin.cn" target="_blank" title="贾大神的网站">Jason&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://wuchong.me" target="_blank" title="Jark&#39;s Blog">Jark&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://hedengcheng.com" target="_blank" title="数据库大神">何登成的技术博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm-blog.aliapp.com" target="_blank" title="阿里中间件">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://tech.meituan.com" target="_blank" title="美图点评技术团队">美图点评技术团队</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="https://www.ibm.com/developerworks/cn/" target="_blank" title="IBM developerworks">IBM developerworks</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p>  <br/>
+			当你的才华还撑不起你的野心时，你就应该静下心来学习。</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/wtz123" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/wtz123" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2016 
+		
+		<a href="/about" target="_blank" title="Tony">Tony</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"wtz123"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-62752575-1', 'auto');  
+ga('send', 'pageview');
+</script>
+
+
+
+<script type="text/javascript">
+var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F6af02e94d74ff35930f2cdd4a4206185' type='text/javascript'%3E%3C/script%3E"));
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

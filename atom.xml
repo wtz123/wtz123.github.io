@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Talk is cheap, show me the code.]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://wangtianzhi.cn/"/>
-  <updated>2016-02-05T11:56:59.000Z</updated>
+  <updated>2016-03-05T12:11:30.000Z</updated>
   <id>http://wangtianzhi.cn/</id>
   
   <author>
@@ -15,11 +15,209 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title><![CDATA[springMVC源码分析]]></title>
+    <link href="http://wangtianzhi.cn/2016/03/05/springmvc-source-analysis/"/>
+    <id>http://wangtianzhi.cn/2016/03/05/springmvc-source-analysis/</id>
+    <published>2016-03-05T11:00:40.000Z</published>
+    <updated>2016-03-05T12:11:30.000Z</updated>
+    <content type="html"><![CDATA[<p>springMVC是spring序列的一个web框架，现在已支持restful架构的风格，有取代struts2的趋势。本文只是将网上的一些文章进行总结归纳引用，便于回忆查找。</p>
+<h3 id="一-spring版本区别">一.spring版本区别</h3><blockquote>
+<ol>
+<li>Spring2.5之前，我们都是通过实现Controller接口或其实现来定义我们的处理器类。已经@Deprecated。</li>
+<li>Spring2.5引入注解式处理器支持，通过<strong>@Controller</strong> 和 <strong>@RequestMapping</strong>注解定义我们的处理器类。<br>并且提供了一组强大的注解：</li>
+</ol>
+<ul>
+<li><strong>@Controller</strong>：用于标识是处理器类；</li>
+<li><strong>@RequestMapping</strong>：请求到处理器功能方法的映射规则；</li>
+<li><strong>@RequestParam</strong>：请求参数到处理器功能处理方法的方法参数上的绑定；</li>
+<li><strong>@ModelAttribute</strong>：请求参数到命令对象的绑定；</li>
+<li><strong>@SessionAttributes</strong>：用于声明session级别存储的属性，放置在处理器类上，通常列出模型属性（如@ModelAttribute）对应的名称，则这些属性会透明的保存到session中；</li>
+<li><strong>@InitBinder</strong>：自定义数据绑定注册支持，用于将请求参数转换到命令对象属性的对应类型；<br>注意：需要通过处理器映射DefaultAnnotationHandlerMapping和处理器适配器AnnotationMethodHandlerAdapter来开启支持@Controller 和@RequestMapping注解的处理器。</li>
+</ul>
+<ol>
+<li>Spring3.0引入RESTful架构风格支持(通过@PathVariable注解和一些其他特性支持),且又引入了更多的注解支持：</li>
+</ol>
+<ul>
+<li><strong>@CookieValue</strong>：cookie数据到处理器功能处理方法的方法参数上的绑定；</li>
+<li><strong>@RequestHeader</strong>：请求头（header）数据到处理器功能处理方法的方法参数上的绑定；</li>
+<li><strong>@RequestBody</strong>：请求的body体的绑定（通过HttpMessageConverter进行类型转换）；</li>
+<li><strong>@ResponseBody</strong>：处理器功能处理方法的返回值作为响应体（通过HttpMessageConverter进行类型转换）；</li>
+<li><strong>@ResponseStatus</strong>：定义处理器功能处理方法/异常处理器返回的状态码和原因；</li>
+<li><strong>@ExceptionHandler</strong>：注解式声明异常处理器；</li>
+<li><strong>@PathVariable</strong>：请求URI中的模板变量部分到处理器功能处理方法的方法参数上的绑定，从而支持RESTful架构风格的URI；</li>
+</ul>
+<ol>
+<li>Spring3.1使用新的HandlerMapping 和 HandlerAdapter来支持@Contoller和@RequestMapping注解处理器。<br>新的@Contoller和@RequestMapping注解支持类：处理器映射<strong>RequestMappingHandlerMapping</strong>和处理器适配器<strong>RequestMappingHandlerAdapter</strong>组合来代替Spring2.5开始的处理器映射DefaultAnnotationHandlerMapping和处理器适配器AnnotationMethodHandlerAdapter，提供更多的扩展点。</li>
+</ol>
+</blockquote>
+<p>配置了<code>&lt;mvc:annotation-driven/&gt;</code>相当于自动加了一堆bean：</p>
+<blockquote>
+<p>registers a <strong>RequestMappingHandlerMapping</strong>, a <strong>RequestMappingHandlerAdapter</strong>, and an <strong>ExceptionHandlerExceptionResolver</strong> (among others) in support of processing requests with annotated controller methods using annotations such as @RequestMapping, @ExceptionHandler, and others.</p>
+<p>It also enables the following:</p>
+<ul>
+<li>Spring 3 style type conversion through a ConversionService instance in addition to the JavaBeans PropertyEditors used for Data Binding.</li>
+<li>Support for formatting Number fields using the @NumberFormat annotation through the ConversionService.</li>
+<li>Support for formatting Date, Calendar, Long, and Joda Time fields using the @DateTimeFormat annotation.</li>
+<li>Support for validating @Controller inputs with @Valid, if a JSR-303 Provider is present on the classpath.</li>
+<li><strong>HttpMessageConverter</strong> support for @RequestBody method parameters and @ResponseBody method return values from @RequestMapping or @ExceptionHandler methods.</li>
+</ul>
+<p>This is the complete list of HttpMessageConverters set up by mvc:annotation-driven:</p>
+<ul>
+<li>ByteArrayHttpMessageConverter converts byte arrays.</li>
+<li>StringHttpMessageConverter converts strings.</li>
+<li>ResourceHttpMessageConverter converts to/from org.springframework.core.io.Resource for all media types.</li>
+<li>SourceHttpMessageConverter converts to/from a javax.xml.transform.Source.</li>
+<li>FormHttpMessageConverter converts form data to/from a MultiValueMap.</li>
+<li>Jaxb2RootElementHttpMessageConverter converts Java objects to/from XML — added if JAXB2 is present and Jackson 2 XML extension is not present on the classpath.</li>
+<li>MappingJackson2HttpMessageConverter converts to/from JSON — added if Jackson 2 is present on the classpath.</li>
+<li>MappingJackson2XmlHttpMessageConverter converts to/from XML — added if Jackson 2 XML extension is present on the classpath.</li>
+<li>AtomFeedHttpMessageConverter converts Atom feeds — added if Rome is present on the classpath.</li>
+<li>RssChannelHttpMessageConverter converts RSS feeds — added if Rome is present on the classpath.</li>
+</ul>
+</blockquote>
+<p>当然，也可以自己自定义各种配置，具体的方法可以参考<a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/mvc.html" target="_blank" rel="external">springMVC docs</a>;</p>
+<h3 id="二-springMVC执行流程">二.springMVC执行流程</h3><p><img src="/img/springmvc-source-analysis/springmvc-request-process.JPG" alt="图片来自跟开涛学springmvc"></p>
+<p>核心架构的具体流程步骤如下：</p>
+<blockquote>
+<ol>
+<li>首先用户发送请求——&gt;DispatcherServlet，前端控制器收到请求后自己不进行处理，而是委托给其他的解析器进行处理，作为统一访问点，进行全局的流程控制；</li>
+<li>DispatcherServlet——&gt;HandlerMapping， HandlerMapping将会把请求映射为HandlerExecutionChain对象（包含一个Handler处理器（页面控制器）对象、多个HandlerInterceptor拦截器）对象，通过这种策略模式，很容易添加新的映射策略；</li>
+<li>DispatcherServlet——&gt;HandlerAdapter，HandlerAdapter将会把处理器包装为适配器，从而支持多种类型的处理器，即适配器设计模式的应用，从而很容易支持很多类型的处理器；</li>
+<li>HandlerAdapter——&gt;处理器功能处理方法的调用，HandlerAdapter将会根据适配的结果调用真正的处理器的功能处理方法，完成功能处理；并返回一个ModelAndView对象（包含模型数据、逻辑视图名）；</li>
+<li>ModelAndView的逻辑视图名——&gt; ViewResolver， ViewResolver将把逻辑视图名解析为具体的View，通过这种策略模式，很容易更换其他视图技术；</li>
+<li>View——&gt;渲染，View会根据传进来的Model模型数据进行渲染，此处的Model实际是一个Map数据结构，因此很容易支持其他视图技术；</li>
+<li>返回控制权给DispatcherServlet，由DispatcherServlet返回响应给用户，到此一个流程结束。</li>
+</ol>
+</blockquote>
+<h3 id="三-_源码分析">三. 源码分析</h3><p>处理的核心代码在DispatcherServlet的doDispatch方法中：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doDispatch</span><span class="params">(HttpServletRequest request, HttpServletResponse response)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">HttpServletRequest processedRequest = request;</span><br><span class="line">HandlerExecutionChain mappedHandler = <span class="keyword">null</span>;</span><br><span class="line"><span class="keyword">boolean</span> multipartRequestParsed = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">ModelAndView mv = <span class="keyword">null</span>;</span><br><span class="line">Exception dispatchException = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line"><span class="comment">////检查是否是请求是否是multipart（如文件上传），如果是将通过MultipartResolver解析</span></span><br><span class="line">processedRequest = checkMultipart(request);</span><br><span class="line">multipartRequestParsed = processedRequest != request;</span><br><span class="line"></span><br><span class="line"><span class="comment">// //步骤2、请求到处理器（页面控制器）的映射，通过HandlerMapping进行映射</span></span><br><span class="line">mappedHandler = getHandler(processedRequest, <span class="keyword">false</span>);</span><br><span class="line"><span class="keyword">if</span> (mappedHandler == <span class="keyword">null</span> || mappedHandler.getHandler() == <span class="keyword">null</span>) &#123;</span><br><span class="line">noHandlerFound(processedRequest, response);</span><br><span class="line"><span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//步骤3、处理器适配，即将我们的处理器包装成相应的适配器（从而支持多种类型的处理器）</span></span><br><span class="line">HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());</span><br><span class="line"></span><br><span class="line"><span class="comment">// Process last-modified header, if supported by the handler.</span></span><br><span class="line">String method = request.getMethod();</span><br><span class="line"><span class="keyword">boolean</span> isGet = <span class="string">"GET"</span>.equals(method);</span><br><span class="line"><span class="keyword">if</span> (isGet || <span class="string">"HEAD"</span>.equals(method)) &#123;</span><br><span class="line"><span class="keyword">long</span> lastModified = ha.getLastModified(request, mappedHandler.getHandler());</span><br><span class="line"><span class="keyword">if</span> (logger.isDebugEnabled()) &#123;</span><br><span class="line">String requestUri = urlPathHelper.getRequestUri(request);</span><br><span class="line">logger.debug(<span class="string">"Last-Modified value for ["</span> + requestUri + <span class="string">"] is: "</span> + lastModified);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">new</span> ServletWebRequest(request, response).checkNotModified(lastModified) &amp;&amp; isGet) &#123;</span><br><span class="line"><span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//执行处理器相关的拦截器的预处理（HandlerInterceptor.preHandle）</span></span><br><span class="line"><span class="keyword">if</span> (!mappedHandler.applyPreHandle(processedRequest, response)) &#123;</span><br><span class="line"><span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line"><span class="comment">//步骤4、由适配器执行处理器（调用处理器相应功能处理方法） </span></span><br><span class="line">mv = ha.handle(processedRequest, response, mappedHandler.getHandler());</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">finally</span> &#123;</span><br><span class="line"><span class="keyword">if</span> (asyncManager.isConcurrentHandlingStarted()) &#123;</span><br><span class="line"><span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">applyDefaultViewName(request, mv);</span><br><span class="line"><span class="comment">//执行处理器相关的拦截器的后处理（HandlerInterceptor.postHandle）</span></span><br><span class="line">mappedHandler.applyPostHandle(processedRequest, response, mv);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">dispatchException = ex;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//步骤5 由ViewResolver解析View（viewResolver.resolveViewName(viewName, locale)）  </span></span><br><span class="line"><span class="comment">//步骤6 视图在渲染时会把Model传入（view.render(mv.getModelInternal(), request, response);）</span></span><br><span class="line"><span class="comment">//HandlerInterceptor.afterCompletion</span></span><br><span class="line">processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">triggerAfterCompletion(processedRequest, response, mappedHandler, ex);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">catch</span> (Error err) &#123;</span><br><span class="line">triggerAfterCompletionWithError(processedRequest, response, mappedHandler, err);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">finally</span> &#123;</span><br><span class="line"><span class="keyword">if</span> (asyncManager.isConcurrentHandlingStarted()) &#123;</span><br><span class="line"><span class="comment">// Instead of postHandle and afterCompletion</span></span><br><span class="line">mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);</span><br><span class="line"><span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// Clean up any resources used by a multipart request.</span></span><br><span class="line"><span class="keyword">if</span> (multipartRequestParsed) &#123;</span><br><span class="line">cleanupMultipart(processedRequest);</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>步骤4调用handle来真正执行响应的controller的方法，在此过程中还会调用convert进行类型转换等操作，若添加了<code>&lt;mvc:annotation-driven/&gt;</code>的配置，如果maven引用了Jackson 2包，则会调用<code>MappingJackson2HttpMessageConverter</code>这个converter进行json和对象的间的转换。</p>
+<p>步骤5中ViewResolver将把逻辑视图名解析为具体的View，通过这种策略模式，很容易更换其他视图技术，如JSP、freemarker等;步骤6会根据传进来的Model模型数据进行渲染。</p>
+<p>在方法的执行前后，还会调用拦截器的相关方法：</p>
+<p><strong>拦截器接口：</strong><br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">HandlerInterceptor</span> </span>&#123;  </span><br><span class="line"><span class="function"><span class="keyword">boolean</span> <span class="title">preHandle</span><span class="params">(  </span><br><span class="line">HttpServletRequest request, HttpServletResponse response,   </span><br><span class="line">Object handler)</span>   </span><br><span class="line"><span class="keyword">throws</span> Exception</span>;  </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">postHandle</span><span class="params">(  </span><br><span class="line">HttpServletRequest request, HttpServletResponse response,   </span><br><span class="line">Object handler, ModelAndView modelAndView)</span>   </span><br><span class="line"><span class="keyword">throws</span> Exception</span>;  </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">afterCompletion</span><span class="params">(  </span><br><span class="line">HttpServletRequest request, HttpServletResponse response,   </span><br><span class="line">Object handler, Exception ex)</span>  </span><br><span class="line"><span class="keyword">throws</span> Exception</span>;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p><strong>preHandle</strong>：预处理回调方法，实现处理器的预处理（如登录检查），第三个参数为响应的处理器（如我们上一章的Controller实现）；返回值：true表示继续流程（如调用下一个拦截器或处理器）；false表示流程中断（如登录检查失败），不会继续调用其他的拦截器或处理器，此时我们需要通过response来产生响应；</p>
+<p><strong>postHandle</strong>：后处理回调方法，实现处理器的后处理（但在渲染视图之前），此时我们可以通过modelAndView（模型和视图对象）对模型数据进行处理或对视图进行处理，modelAndView也可能为null；</p>
+<p><strong>afterCompletion</strong>：整个请求处理完毕回调方法，即在视图渲染完毕时回调，如性能监控中我们可以在此记录结束时间并输出消耗时间，还可以进行一些资源清理，类似于try-catch-finally中的finally，但仅调用处理器执行链中preHandle返回true的拦截器的afterCompletion。</p>
+<h3 id="四-_struts2_vs_springMVC">四. struts2 vs springMVC</h3><p><img src="/img/springmvc-source-analysis/struts2-framework.png" alt="struts2框架图"></p>
+<ol>
+<li>struts2是一个请求一个action，springmvc是单实例的；</li>
+<li>struts2是基于类的横切，springmvc是基于方法的，粒度更细；</li>
+<li>一个入口是filter，一个入口是servlet，两者各方面实现机制不一样；</li>
+<li>springMVC开发速度和性能由于struts2（不过springMVC性能比struts1差）；</li>
+<li>spring体系更加强大和活跃；</li>
+<li>注解功能强大，支持restful等；</li>
+<li>struts2更新慢，且经常曝出漏洞，风险大；</li>
+</ol>
+<h3 id="五-_参考文献">五. 参考文献</h3><ol>
+<li><a href="http://jinnianshilongnian.iteye.com/blog/1670856" target="_blank" rel="external">拦截器介绍</a></li>
+<li><a href="http://www.chawenti.com/articles/23596.html" target="_blank" rel="external">SpringMVC关于json、xml自动转换的原理研究</a></li>
+<li><a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/mvc.html" target="_blank" rel="external">springMVC doc</a></li>
+<li><a href="http://www.ibm.com/developerworks/cn/web/wa-restful/" target="_blank" rel="external">使用 Spring 3 MVC HttpMessageConverter 功能构建 RESTful web 服务</a></li>
+<li><a href="http://blog.csdn.net/gstormspire/article/details/8239182" target="_blank" rel="external">SpringMVC与Struts2的对比</a></li>
+<li><a href="http://jinnianshilongnian.iteye.com/blog/1752171" target="_blank" rel="external">跟开涛学SpringMVC</a></li>
+</ol>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>springMVC是spring序列的一个web框架，现在已支持restful架构的风格，有取代struts2的趋势。本文只是将网上的一些文章进行总结归纳引用，便于回忆查找。</p>
+<h3 id="一-spring版本区别">一.spring版本区别</h3><block]]>
+    </summary>
+    
+      <category term="springmvc" scheme="http://wangtianzhi.cn/tags/springmvc/"/>
+    
+      <category term="web" scheme="http://wangtianzhi.cn/tags/web/"/>
+    
+      <category term="web开发" scheme="http://wangtianzhi.cn/categories/web%E5%BC%80%E5%8F%91/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[web与spring初始化过程分析]]></title>
+    <link href="http://wangtianzhi.cn/2016/03/03/web-init-process/"/>
+    <id>http://wangtianzhi.cn/2016/03/03/web-init-process/</id>
+    <published>2016-03-03T13:58:40.000Z</published>
+    <updated>2016-03-05T08:53:18.000Z</updated>
+    <content type="html"><![CDATA[<h3 id="一-总体初始化流程">一.总体初始化流程</h3><p>web.xml加载顺序，context-param -&gt; listener -&gt; filter -&gt; servlet；</p>
+<ol>
+<li><p>启动一个WEB项目的时候，WEB容器会去读取它的配置文件web.xml，读取<listener>和<context-param>两个结点；</context-param></listener></p>
+</li>
+<li><p>紧接着，容器创建一个ServletContext（servlet上下文），这个web项目的所有部分都将共享这个上下文；</p>
+</li>
+<li><p>容器将<context-param>转换为键值对，并交给servletContext；</context-param></p>
+</li>
+<li><p>容器创建<listener>中的类实例，创建监听器。（如spring的ContextLoadListener、RequestContextListener、Log4jConfigListener等）（ContextLoadListener实例化Ioc容器，根据条件决定是否此时实例化bean，如lazy-init,scope等参数）；</listener></p>
+</li>
+<li><p>构建filter链（如CharacterEncodingFilter、OpenSessionInViewFilter、struts2的StrutsPrepareFilter、StrutsExecuteFilter等）；</p>
+</li>
+</ol>
+<p>注意：<strong>servlet是单实例多线程；spring bean默认也是单实例的，不过可以通过scope参数来设置为别的；struts2中action是多例的</strong>。另外，本文基于spring3.2.2源码来分析的。</p>
+<h3 id="二-详细解析">二.详细解析</h3><p><strong>servlet、listener、filter的关键方法</strong></p>
+<p><strong>Servlet</strong><br>-init(ServletConfig config)<br>-service(ServletRequest req, ServletResponse res)<br>//service再根据请求类型调用doGet、doPost等方法<br>-destroy()</p>
+<p><strong>Listener</strong><br>ServletContextListener<br>-contextInitialized ( ServletContextEvent sce )<br>-contextDestroyed ( ServletContextEvent sce )<br>ServletRequestListener<br>-requestInitialized(ServletRequestEvent requestEvent)<br>-requestDestroyed(ServletRequestEvent requestEvent)</p>
+<p><strong>Filter</strong><br>-init(FilterConfig filterConfig)<br>-destroy()<br>-doFilter(ServletRequest request, ServletResponse response, FilterChain chain)  </p>
+<h4 id="1-Spring-ContextLoaderListener">1.Spring-ContextLoaderListener</h4><p><code>ContextLoaderListener</code>作用就是启动Web容器时，自动装配spring的配置文件的配置信息；<br><code>ContextLoaderServlet</code>:与ContextLoaderListener功能一样；</p>
+<p>ContextLoaderListener它继承了<code>javax.servlet.ServletContextListener</code>接口。ServletContextListener是J2EE Servlet API中的一个标准接口，它能够监听ServletContext对象的生命周期，实际上就是监听Web应用的生命周期。当Servlet容器<strong>启动或终止</strong>Web应用时，会触发ServletContextEvent事件，该事件由ServletContextListener来处理。</p>
+<p>Ioc容器实例化流程如图所示：<br><img src="/img/web-init-process/spring-start-up.png" alt="ContextLoaderListener初始化调用流程"><br>实例化Spring IoC容器的过程中，最主要的两个方法是<code>createWebApplicationContext</code>和<code>configureAndRefreshWebApplicationContext</code>方法。</p>
+<p><code>createWebApplicationContext</code>方法用于返回XmlWebApplicationContext实例，即Web环境下的Spring IoC容器。</p>
+<p><code>configureAndRefreshWebApplicationContext</code>用于配置XmlWebApplicationContext，读取web.xml中通过<code>contextConfigLocation</code>标签指定的XML文件，实例化XML文件中配置的bean，并在上一步中实例化的容器中进行注册。</p>
+<p>完成以上两步的操作后，Spring MVC会将XmlWebApplicationContext实例以属性的方式注册到ServletContext中。此Spring 容器是ROOT上下文，供所有的Spring MVC Servlcet使用。<br>核心的初始化逻辑都在AbstractApplicationContext的<code>refresh()</code>方法里：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">refresh</span><span class="params">()</span></span>&#123;</span><br><span class="line"><span class="comment">// Prepare this context for refreshing.</span></span><br><span class="line">prepareRefresh();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Tell the subclass to refresh the internal bean factory.</span></span><br><span class="line">ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Prepare the bean factory for use in this context.</span></span><br><span class="line">prepareBeanFactory(beanFactory);</span><br><span class="line"><span class="comment">// 注册实现了BeanPostProcessor接口的bean</span></span><br><span class="line">postProcessBeanFactory(beanFactory);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 初始化和执行BeanFactoryPostProcessor beans</span></span><br><span class="line">invokeBeanFactoryPostProcessors(beanFactory);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 初始化和执行BeanPostProcessor beans</span></span><br><span class="line">registerBeanPostProcessors(beanFactory);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Initialize message source for this context.</span></span><br><span class="line">initMessageSource();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Initialize event multicaster for this context.</span></span><br><span class="line">initApplicationEventMulticaster();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Initialize other special beans in specific context subclasses.</span></span><br><span class="line">onRefresh();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Check for listener beans and register them.</span></span><br><span class="line">registerListeners();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 实例化non-lazy-init的单例bean.</span></span><br><span class="line">finishBeanFactoryInitialization(beanFactory);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Last step: publish corresponding event.</span></span><br><span class="line">finishRefresh();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>obtainFreshBeanFactory()方法会刷新所有BeanFactory子容器，在此会<strong>加载、解析Bean</strong>的定义。<br>finishBeanFactoryInitialization()方法用来<strong>实例化bean</strong>。</p>
+<p><strong>bean实例化时机：</strong><br>若是单例、lazy-init=false且不是抽象类，则实例化,否则等到执行时才实例化；实例化中若有依赖别的bean，需要先实例化依赖的bean。<br>具体代码逻辑在<code>DefaultListableBeanFactory</code>的<code>preInstantiateSingletons()</code>和<code>AbstractBeanFactory</code>的<code>doGetBean()</code>，可以参考<a href="http://www.ibm.com/developerworks/cn/java/j-lo-spring-principle/" target="_blank" rel="external">Spring 框架的设计理念与设计模式分析</a>。</p>
+<p><strong>ApplicationContext vs BeanFactory</strong><br>ApplicationContext的类继承关系如图所示：<br><img src="/img/web-init-process/spring-applicationcontext-diagram.png" alt="ApplicationContext类继承关系"><br><code>ApplicationContext</code> 由BeanFactory 派生而来，提供了更多面向实际应用的功能。几乎所有的应用场合我们都直接使用<code>ApplicationContext</code> 而非底层的BeanFactory。在BeanFactory 中，很多功能需要以编程的方式实现，而在ApplicationContext中则可以通过配置的方式实现。</p>
+<p>ApplicationContext的主要实现类是<code>ClassPathXmlApplicationContext</code> 和<code>FileSystemXmlApplicationContext</code>，前者默认从类路径加载配置文件，后者默认从文件系统中装载配置文件。</p>
+<p><code>WebApplicationContext</code> 是专门为Web 应用准备的，WebApplicationContext 扩展了ApplicationContext。<br>Spring 分别提供了用于启动WebApplicationContext 的Servlet 和Web 容器监听器：</p>
+<blockquote>
+<p>org.springframework.web.context.ContextLoaderServlet；<br>org.springframework.web.context.ContextLoaderListener;</p>
+</blockquote>
+<p>两者的内部都实现了启动WebApplicationContext 实例的逻辑，我们只要根据Web 容器的具体情况选择两者之一，并在web.xml 中完成配置就可以了。  </p>
+<h4 id="2-SpringMVC-DispatcherServlet">2.SpringMVC-DispatcherServlet</h4><p>DispatcherServlet配置在web.xml中，是springmvc的入口，它的继承关系图如下图所示：<br><img src="/img/web-init-process/dispatcherServlet类继承图.png" alt="DispatcherServlet类继承图"></p>
+<ol>
+<li>HttpServletBean继承HttpServlet，因此在Web容器启动时将调用它的init方法，该初始化方法的主要作用：<br>a. 将Servlet初始化参数（init-param）设置到该组件上（如contextAttribute、contextClass、namespace、contextConfigLocation），通过BeanWrapper简化设值过程，方便后续使用；<br>b. 提供给子类初始化扩展点，initServletBean()，该方法由FrameworkServlet覆盖。</li>
+<li>FrameworkServlet继承HttpServletBean，通过initServletBean()进行Web上下文初始化，该方法主要覆盖一下两件事情：<br>a. 初始化web上下文；<br>b. 提供给子类初始化扩展点；</li>
+<li>DispatcherServlet继承FrameworkServlet，并实现了onRefresh()方法提供一些前端控制器相关的配置：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DispatcherServlet</span> <span class="keyword">extends</span> <span class="title">FrameworkServlet</span> </span>&#123;</span><br><span class="line"><span class="comment">//实现子类的onRefresh()方法，该方法委托为initStrategies()方法。</span></span><br><span class="line"><span class="annotation">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onRefresh</span><span class="params">(ApplicationContext context)</span> </span>&#123;</span><br><span class="line">initStrategies(context);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>//初始化默认的Spring Web MVC框架使用的策略（如HandlerMapping）<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initStrategies</span><span class="params">(ApplicationContext context)</span> </span>&#123;</span><br><span class="line">initMultipartResolver(context);</span><br><span class="line">initLocaleResolver(context);</span><br><span class="line">initThemeResolver(context);</span><br><span class="line">initHandlerMappings(context);</span><br><span class="line">initHandlerAdapters(context);</span><br><span class="line">initHandlerExceptionResolvers(context);</span><br><span class="line">initRequestToViewNameTranslator(context);</span><br><span class="line">initViewResolvers(context);</span><br><span class="line">initFlashMapManager(context);</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>从如上代码可以看出，DispatcherServlet启动时会进行我们需要的Web层Bean的配置，如HandlerMapping、HandlerAdapter等，而且如果我们没有配置，还会给我们提供默认的配置。</p>
+<p>从如上代码我们可以看出，整个DispatcherServlet初始化的过程和做了些什么事情，具体主要做了如下两件事情：</p>
+<ol>
+<li>初始化Spring Web MVC使用的Web上下文，并且可能指定父容器为（ContextLoaderListener加载了根上下文）；</li>
+<li>初始化DispatcherServlet使用的策略，如HandlerMapping、HandlerAdapter等。</li>
+</ol>
+<h4 id="3-Spring-RequestContextListener">3.Spring-RequestContextListener</h4><p>ContextLoaderListener实现ServletContextListener监听器接口，而ServletContextListener只负责监听Web容器的启动和关闭的事件。RequestContextListener实现ServletRequestListener监听器接口，该监听器监听HTTP请求事件，Web服务器接收的每次请求都会通知该监听器。</p>
+<h4 id="4-其它的一些类">4.其它的一些类</h4><p>1）CharacterEncodingFilter：字符编码转换filter，这个filter一定要注意顺序，要放在其它filter前面，要不然可能不起作用；</p>
+<p>2） OpenSessionInViewFilter：主要功能是用来把一个Hibernate Session和一次完整的请求过程对应的线程相绑定。跟延迟加载相关。</p>
+<p>3） Struts2的入口：StrutsPrepareFilter、StrutsExecuteFilter、StrutsListener</p>
+<h3 id="三-_参考文献">三. 参考文献</h3><ol>
+<li><a href="http://blog.csdn.net/hongshan50/article/details/7335443" target="_blank" rel="external">web.xml加载顺序</a></li>
+<li><a href="http://www.ibm.com/developerworks/cn/java/j-lo-spring-principle/" target="_blank" rel="external">Spring 框架的设计理念与设计模式分析</a></li>
+<li><a href="http://www.ibm.com/developerworks/cn/java/j-lo-servlet/" target="_blank" rel="external">Servlet 工作原理解析</a></li>
+<li><a href="http://jinnianshilongnian.iteye.com/blog/1602617" target="_blank" rel="external">第三章 DispatcherServlet详解 ——跟开涛学SpringMVC</a> </li>
+<li>&lt;深入分析JAVA web技术内幕-许令波&gt;</li>
+<li><a href="http://spring.io/docs/" target="_blank" rel="external">spring docs</a></li>
+</ol>
+]]></content>
+    <summary type="html">
+    <![CDATA[<h3 id="一-总体初始化流程">一.总体初始化流程</h3><p>web.xml加载顺序，context-param -&gt; listener -&gt; filter -&gt; servlet；</p>
+<ol>
+<li><p>启动一个WEB项目的时候，WEB容器会]]>
+    </summary>
+    
+      <category term="spring" scheme="http://wangtianzhi.cn/tags/spring/"/>
+    
+      <category term="springmvc" scheme="http://wangtianzhi.cn/tags/springmvc/"/>
+    
+      <category term="web" scheme="http://wangtianzhi.cn/tags/web/"/>
+    
+      <category term="web开发" scheme="http://wangtianzhi.cn/categories/web%E5%BC%80%E5%8F%91/"/>
+    
+  </entry>
+  
+  <entry>
     <title><![CDATA[netty源码分析]]></title>
     <link href="http://wangtianzhi.cn/2016/02/04/netty-source-analysis/"/>
     <id>http://wangtianzhi.cn/2016/02/04/netty-source-analysis/</id>
     <published>2016-02-04T13:39:19.000Z</published>
-    <updated>2016-02-05T11:56:59.000Z</updated>
+    <updated>2016-02-05T11:57:08.000Z</updated>
     <content type="html"><![CDATA[<h4 id="一-netty概述">一.netty概述</h4><p>java nio是jdk1.4引入的网络编程API，相比于以前BIO阻塞方式的接口，能大大提高网络通信的效率。</p>
 <p>netty是一个网络通信框架，底层基于java NIO，用来简化NIO编程的开发。因为如果基于NIO直接实现网络编程的开发，比较复杂，很容易出错，而使用了netty之后，只需要关注逻辑处理部分就可以了。此外，netty还提供了多种网络协议的封装。</p>
 <p>Netty4的beta3加了AIO了,但是到beta9又去掉了,作者的意思是测试下来AIO性能不如NIO,所以没必要用。</p>

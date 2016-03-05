@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>springMVC源码分析 | Tony&#39;s blog</title>
+    <title>springMVC执行流程分析 | Tony&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="Tony">
@@ -17,7 +17,7 @@
 Spring2.5之前，我们都是通过实现Controller接口或其实现来定义我们的处理器类。已经@Deprecated。
 Spring2.5引入注解式处理器支持，通过@Controller 和">
 <meta property="og:type" content="article">
-<meta property="og:title" content="springMVC源码分析">
+<meta property="og:title" content="springMVC执行流程分析">
 <meta property="og:url" content="http://wangtianzhi.cn/2016/03/05/springmvc-source-analysis/index.html">
 <meta property="og:site_name" content="Tony's blog">
 <meta property="og:description" content="springMVC是spring序列的一个web框架，现在已支持restful架构的风格，有取代struts2的趋势。本文只是将网上的一些文章进行总结归纳引用，便于回忆查找。
@@ -28,7 +28,7 @@ Spring2.5引入注解式处理器支持，通过@Controller 和">
 <meta property="og:image" content="/img/springmvc-source-analysis/springmvc-request-process.JPG">
 <meta property="og:image" content="/img/springmvc-source-analysis/struts2-framework.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="springMVC源码分析">
+<meta name="twitter:title" content="springMVC执行流程分析">
 <meta name="twitter:description" content="springMVC是spring序列的一个web框架，现在已支持restful架构的风格，有取代struts2的趋势。本文只是将网上的一些文章进行总结归纳引用，便于回忆查找。
 一.spring版本区别
 
@@ -93,7 +93,7 @@ Spring2.5引入注解式处理器支持，通过@Controller 和">
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/03/05/springmvc-source-analysis/" title="springMVC源码分析" itemprop="url">springMVC源码分析</a>
+      <a href="/2016/03/05/springmvc-source-analysis/" title="springMVC执行流程分析" itemprop="url">springMVC执行流程分析</a>
   </h1>
   <p class="article-author">By
        
@@ -117,9 +117,7 @@ Spring2.5引入注解式处理器支持，通过@Controller 和">
 <h3 id="一-spring版本区别">一.spring版本区别</h3><blockquote>
 <ol>
 <li>Spring2.5之前，我们都是通过实现Controller接口或其实现来定义我们的处理器类。已经@Deprecated。</li>
-<li>Spring2.5引入注解式处理器支持，通过<strong>@Controller</strong> 和 <strong>@RequestMapping</strong>注解定义我们的处理器类。<br>并且提供了一组强大的注解：</li>
-</ol>
-<ul>
+<li>Spring2.5引入注解式处理器支持，通过<strong>@Controller</strong> 和 <strong>@RequestMapping</strong>注解定义我们的处理器类。<br>并且提供了一组强大的注解：<ul>
 <li><strong>@Controller</strong>：用于标识是处理器类；</li>
 <li><strong>@RequestMapping</strong>：请求到处理器功能方法的映射规则；</li>
 <li><strong>@RequestParam</strong>：请求参数到处理器功能处理方法的方法参数上的绑定；</li>
@@ -127,10 +125,8 @@ Spring2.5引入注解式处理器支持，通过@Controller 和">
 <li><strong>@SessionAttributes</strong>：用于声明session级别存储的属性，放置在处理器类上，通常列出模型属性（如@ModelAttribute）对应的名称，则这些属性会透明的保存到session中；</li>
 <li><strong>@InitBinder</strong>：自定义数据绑定注册支持，用于将请求参数转换到命令对象属性的对应类型；<br>注意：需要通过处理器映射DefaultAnnotationHandlerMapping和处理器适配器AnnotationMethodHandlerAdapter来开启支持@Controller 和@RequestMapping注解的处理器。</li>
 </ul>
-<ol>
-<li>Spring3.0引入RESTful架构风格支持(通过@PathVariable注解和一些其他特性支持),且又引入了更多的注解支持：</li>
-</ol>
-<ul>
+</li>
+<li>Spring3.0引入RESTful架构风格支持(通过@PathVariable注解和一些其他特性支持),且又引入了更多的注解支持：<ul>
 <li><strong>@CookieValue</strong>：cookie数据到处理器功能处理方法的方法参数上的绑定；</li>
 <li><strong>@RequestHeader</strong>：请求头（header）数据到处理器功能处理方法的方法参数上的绑定；</li>
 <li><strong>@RequestBody</strong>：请求的body体的绑定（通过HttpMessageConverter进行类型转换）；</li>
@@ -139,7 +135,7 @@ Spring2.5引入注解式处理器支持，通过@Controller 和">
 <li><strong>@ExceptionHandler</strong>：注解式声明异常处理器；</li>
 <li><strong>@PathVariable</strong>：请求URI中的模板变量部分到处理器功能处理方法的方法参数上的绑定，从而支持RESTful架构风格的URI；</li>
 </ul>
-<ol>
+</li>
 <li>Spring3.1使用新的HandlerMapping 和 HandlerAdapter来支持@Contoller和@RequestMapping注解处理器。<br>新的@Contoller和@RequestMapping注解支持类：处理器映射<strong>RequestMappingHandlerMapping</strong>和处理器适配器<strong>RequestMappingHandlerAdapter</strong>组合来代替Spring2.5开始的处理器映射DefaultAnnotationHandlerMapping和处理器适配器AnnotationMethodHandlerAdapter，提供更多的扩展点。</li>
 </ol>
 </blockquote>
@@ -230,7 +226,7 @@ Spring2.5引入注解式处理器支持，通过@Controller 和">
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://wangtianzhi.cn/2016/03/05/springmvc-source-analysis/" data-title="springMVC源码分析 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
+	  <div data-url="http://wangtianzhi.cn/2016/03/05/springmvc-source-analysis/" data-title="springMVC执行流程分析 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -256,7 +252,7 @@ Spring2.5引入注解式处理器支持，通过@Controller 和">
 
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2016/03/05/springmvc-source-analysis/" data-title="springMVC源码分析" data-url="http://wangtianzhi.cn/2016/03/05/springmvc-source-analysis/"></div>
+	<div class="ds-thread" data-thread-key="2016/03/05/springmvc-source-analysis/" data-title="springMVC执行流程分析" data-url="http://wangtianzhi.cn/2016/03/05/springmvc-source-analysis/"></div>
 </section>
 
 

@@ -2,6 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://wangtianzhi.cn/goodarticle/index.html</loc>
+    <lastmod>2016-03-11T15:23:31.000Z</lastmod>
+  </url>
+  
+  <url>
     <loc>http://wangtianzhi.cn/2016/03/05/springmvc-source-analysis/</loc>
     <lastmod>2016-03-05T13:37:14.000Z</lastmod>
   </url>

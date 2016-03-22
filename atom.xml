@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Talk is cheap, show me the code.]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://wangtianzhi.cn/"/>
-  <updated>2016-03-22T13:33:04.000Z</updated>
+  <updated>2016-03-22T13:43:29.000Z</updated>
   <id>http://wangtianzhi.cn/</id>
   
   <author>
@@ -19,9 +19,9 @@
     <link href="http://wangtianzhi.cn/2016/03/22/https-principle-analysis/"/>
     <id>http://wangtianzhi.cn/2016/03/22/https-principle-analysis/</id>
     <published>2016-03-22T12:20:40.000Z</published>
-    <updated>2016-03-22T13:33:04.000Z</updated>
+    <updated>2016-03-22T13:43:29.000Z</updated>
     <content type="html"><![CDATA[<p>最近项目中要用到https，找运维人员配置相关参数时，被问到要配置单向认证还是双向认证，瞬间傻了，已是回来研究了下https的原理。</p>
-<p>https已经成为电商网站、银行、资金有关的系统的标配，特别是现在网络流量劫持增多、资金频繁被盗等场景下，重要网站https化势在必行。那么https原理是什么？单向认证、双向认证、为何要依赖于证书颁发机构、网站改成https需要改造哪些点、12306网站为何需要配置根证书？这些都是值得探讨的。</p>
+<p>https已经成为电商网站、银行、资金有关的系统的标配，特别是现在网络流量劫持增多、资金频繁被盗等场景下，重要网站https化势在必行。那么https原理是什么？单向认证、双向认证、为何要依赖于证书颁发机构、12306网站为何需要配置根证书？这些都是值得探讨的。</p>
 <h3 id="一-https原理">一.https原理</h3><p>网景公司设计了SSL（Secure Sockets Layer）协议用于对HTTP协议传输的数据进行加密，从而就诞生了HTTPS。SSL目前的版本是3.0，被IETF（Internet Engineering Task Force）定义在RFC 6101中，之后IETF对SSL 3.0进行了升级，于是出现了TLS（Transport Layer Security） 1.0，定义在RFC 2246。实际上我们现在的HTTPS都是用的TLS协议，但是由于SSL出现的时间比较早，并且依旧被现在浏览器所支持。</p>
 <p><img src="/img/https-principle-analysis/https-handle-process.png" alt="https原理图-图片来自网络"></p>
 <p><strong>1. 客户端发起https请求</strong></p>

@@ -2,6 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://wangtianzhi.cn/2016/04/12/AQS-of-concurrent/</loc>
+    <lastmod>2016-04-16T01:14:08.000Z</lastmod>
+  </url>
+  
+  <url>
     <loc>http://wangtianzhi.cn/2016/03/22/https-principle-analysis/</loc>
     <lastmod>2016-03-22T13:43:29.000Z</lastmod>
   </url>

@@ -120,10 +120,11 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span> </span>&#123;</span><br><span class="line"><span class="keyword">volatile</span> <span class="keyword">int</span> waitStatus;</span><br><span class="line"><span class="keyword">volatile</span> Node prev;</span><br><span class="line"><span class="keyword">volatile</span> Node next;</span><br><span class="line"><span class="keyword">volatile</span> Thread thread;       </span><br><span class="line">Node nextWaiter;</span><br></pre></td></tr></table></figure>
 <p>waitStatus用来表示:</p>
 <ul>
-<li>CANCELLED </li>
+<li>CANCELLED 表示当前的线程被取消</li>
 <li>SIGNAL 只有SIGNAL状态的才能调用LockSupport.park将线程挂起，刚加入等待队列时都为0（Condition为CONDITION）</li>
-<li>CONDITION </li>
-<li>PROPAGATE</li>
+<li>CONDITION 表示当前节点在等待condition，也就是在condition队列中</li>
+<li>PROPAGATE 表示当前场景下后续的acquireShared能够得以执行</li>
+<li>0</li>
 </ul>
 <p>AQS维护的队列<br><img src="/img/AQS-of-concurrent/aqs-node-link.png" alt="AQS队列"><br><strong>队列的第一个节点head就是代表持有锁的节点</strong>。</p>
 <p>在使用AQS的同步器中，并不是直接继承AQS，而是将一些功能委托给AQS，在同步器类内部中定义内部类，通过内部类对象来调用AQS的功能。因为如果直接继承AQS，那么AQS中的很多在同步器中的无用的方法，也会暴露给调用者，调用者很容易勿用，破坏简洁性。</p>
@@ -142,6 +143,8 @@
 <li>java并发编程实战</li>
 <li><a href="http://www.liuinsect.com/2014/01/27/how_to_understand_condition/" target="_blank" rel="external">怎么理解Condition</a></li>
 <li><a href="http://blog.csdn.net/hengyunabc/article/details/28126139" target="_blank" rel="external">Java的LockSupport.park()实现分析</a></li>
+<li><a href="http://ifeve.com/introduce-abstractqueuedsynchronizer/" target="_blank" rel="external">AbstractQueuedSynchronizer的介绍和原理分析</a></li>
+<li><a href="http://www.liuinsect.com/2014/08/07/jdk1-8-abstractqueuedsynchronizer/" target="_blank" rel="external">深度解析Java8 – AbstractQueuedSynchronizer的实现分析</a></li>
 </ol>
   
 	</div>

@@ -2,6 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://wangtianzhi.cn/2016/05/28/mysql-deadlock-example/</loc>
+    <lastmod>2016-05-28T14:03:11.000Z</lastmod>
+  </url>
+  
+  <url>
     <loc>http://wangtianzhi.cn/2016/04/12/AQS-of-concurrent/</loc>
     <lastmod>2016-04-16T03:02:16.000Z</lastmod>
   </url>

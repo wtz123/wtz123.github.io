@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Talk is cheap, show me the code.]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://wangtianzhi.cn/"/>
-  <updated>2016-04-16T03:02:16.000Z</updated>
+  <updated>2016-05-28T14:03:11.000Z</updated>
   <id>http://wangtianzhi.cn/</id>
   
   <author>
@@ -13,6 +13,44 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title><![CDATA[mysql死锁案例分析]]></title>
+    <link href="http://wangtianzhi.cn/2016/05/28/mysql-deadlock-example/"/>
+    <id>http://wangtianzhi.cn/2016/05/28/mysql-deadlock-example/</id>
+    <published>2016-05-28T06:26:50.000Z</published>
+    <updated>2016-05-28T14:03:11.000Z</updated>
+    <content type="html"><![CDATA[<p>最近在进行系统压测时，产生了mysql死锁的问题。本文就来分析产生死锁的原因。</p>
+<p>要分析产生死锁的原因，需要查看mysql的相关日志信息。由于show engine innodb status输出的信息较多，在屏幕中看不到所有的输出信息，因此先设置输出日志到文档中，然后执行日志输出：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysql:pager cat - &#62;&#62;  ~/tzwang/mysqllog.txt&#65307;&#10;mysql:show engine innodb status;</span><br></pre></td></tr></table></figure>
+<p>在产生死锁的事务中，有两条SQL(下文SQL经过脱敏处理)：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">语句1：</span><br><span class="line"><span class="operator"><span class="keyword">INSERT</span> tbl_log(buss_seq,oper_usr_nm,crt_usr <span class="keyword">SELECT</span> t.buss_seq, <span class="string">'tony'</span> <span class="keyword">as</span> oper_usr_nm,</span><br><span class="line"><span class="string">'tony'</span> <span class="keyword">as</span> crt_usr <span class="keyword">FROM</span> tbl_form_dtl t <span class="keyword">where</span> t.form_no = ? <span class="keyword">AND</span> t.buss_st= ? <span class="keyword">AND</span> t.itct_st= ?</span><br><span class="line"></span><br><span class="line">语句<span class="number">2</span>：</span><br><span class="line"><span class="keyword">update</span> tbl_form_dtl a <span class="keyword">set</span> a.BUSS_ST= <span class="string">'1'</span>,a.UPDATE_TM=<span class="keyword">now</span>(),a.UPDATE_USR = <span class="string">'tony'</span>  </span><br><span class="line"><span class="keyword">where</span> a.form_no= ?  <span class="keyword">AND</span> a.buss_st= ? <span class="keyword">AND</span> a.itct_st= ?</span></span><br></pre></td></tr></table></figure>
+<p>其中tbl_form_dtl表的主键为id,在<strong>form_no</strong>字段有二级索引。</p>
+<p>通过explain命令查看语句1，发现fromtbl_form_dtl t走了二级索引(form_no)，如下图所示：<br><img src="/img/mysql-deadlock-example/explain-sql1-result.png" alt="explain语句1结果"><br>由于事务隔离级别是可重复读级别，且索引是二级索引，所以上述<strong>语句1在锁住二级索引的行锁、GAP LOCK外，还会锁住对应的聚簇索引</strong>。</p>
+<p>通过explain命令查看语句2，发现语句2走的是聚簇索引,如下图所示：<br><img src="/img/mysql-deadlock-example/explain-sql2-result.png" alt="explain 语句2结果"><br>按理来说，语句2是可以走form_no字段的索引的，但是mysql会自动优化，由于该条sql的结果占表数据总量比较大，sql就将其优化成走<strong>聚簇索引</strong>（之所以优化成走聚簇索引，应该是因为二级索引在查询到后，还得再到聚簇索引中update数据）。经测试发现，当将表中的数据增大，使得语句2的覆盖范围占整个表的数据量比例较小时，就走了二级索引。</p>
+<p>分析mysql的日志:</p>
+<blockquote>
+<p>RECORD LOCKS space id 439657 <strong>page no 12</strong> n bits 120 index <code>PRIMARY</code> of table <code>databasename</code>.<code>tbl_form_dtl</code> trx id 54562223 <strong>lock_mode X waiting</strong></p>
+<p>RECORD LOCKS space id 439657 <strong>page no 12</strong> n bits 120 index <code>PRIMARY</code> of table <code>databasename</code>.<code>tbl_form_dtl</code> trx id 54562222 <strong>lock_mode X</strong></p>
+<p>RECORD LOCKS space id 439657 <strong>page no 2317</strong> n bits 120 index <code>PRIMARY</code> of table <code>databasename</code>.<code>tbl_form_dtl</code> trx id 54562222 <strong>lock_mode X waiting</strong></p>
+</blockquote>
+<p>产生死锁的原因：<br>事务54562222在执行语句2时，占有了page no =12的X锁，要获取page no=2317的X锁，而该锁已被事务54562223锁住；<br>事务54562223在执行语句1时，在锁住二级索引时，也获取了page no = 2317的S锁，然后执行语句2，要获取page no = 12的锁，而该锁已被事务54562222锁住。</p>
+<p>如下图所示，事务1在执行语句1时查找二级索引(form_no)，锁住绿色的部分，包括二级索引的Record lock和GAP LOCK，聚簇索引的Record Lock(因为聚簇索引是unique的，所以不用锁GAP LOCK)；此时事务2也在执行语句1，锁住了青色的部分，也包括Record和GAP LOCK,及聚簇索引的Record Lock。然后事务1和事务2各自执行语句2，由于语句2走了聚簇索引，所以要遍历聚簇索引；在mysql的innodb引擎中，由于where条件不是id，因此走聚簇索引需要锁住各个行，不过mysql有优化，在返回到服务器端后，mysql会根据where条件释放不必要的锁，不过在返回服务器端前还是要先加锁的。此时事务1需要等待id=4的锁，id=4已经被事务2锁住；而事务2需要等待id=1的锁，而id=1的锁已经被事务1锁住，因此就造成了死锁。<br><img src="/img/mysql-deadlock-example/index-lock-struct-diagram.png" alt="加锁索引图"></p>
+<p>mysql在检测到发生了死锁后，会释放一个事务的锁，另一个事务就能获得锁，此时就会报死锁异常，在mysql的相关日志中可以看到<code>LATEST DETECTED DEADLOCK</code>的相关记录，通过这部分记录就可以分析出死锁产生的原因。</p>
+<p>造成死锁的原因一般是加锁的顺序不一致导致的问题。数据库大神何登成的<a href="http://hedengcheng.com/?p=771" target="_blank" rel="external">mysql加锁处理分析</a>一文分析了mysql加锁的方式，以及死锁的一些场景，写的简单易懂，值得一看。</p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>最近在进行系统压测时，产生了mysql死锁的问题。本文就来分析产生死锁的原因。</p>
+<p>要分析产生死锁的原因，需要查看mysql的相关日志信息。由于show engine innodb status输出的信息较多，在屏幕中看不到所有的输出信息，因此先设置输出日志到文档]]>
+    </summary>
+    
+      <category term="mysql" scheme="http://wangtianzhi.cn/tags/mysql/"/>
+    
+      <category term="死锁" scheme="http://wangtianzhi.cn/tags/%E6%AD%BB%E9%94%81/"/>
+    
+      <category term="数据库" scheme="http://wangtianzhi.cn/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+  </entry>
   
   <entry>
     <title><![CDATA[AQS并发编程源码分析]]></title>

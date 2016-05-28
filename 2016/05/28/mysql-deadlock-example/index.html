@@ -4,29 +4,31 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>https原理总结 | Tony&#39;s blog</title>
+    <title>mysql死锁案例分析 | Tony&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="Tony">
     
 
     
-    <meta name="description" content="最近项目中要用到https，找运维人员配置相关参数时，被问到要配置单向认证还是双向认证，瞬间傻了，已是回来研究了下https的原理。
-https已经成为电商网站、银行、资金有关的系统的标配，特别是现在网络流量劫持增多、资金频繁被盗等场景下，重要网站https化势在必行。那么https原理是什么？单向认证、双向认证、为何要依赖于证书颁发机构、12306网站为何需要配置根证书？这些都是值得探讨的。
-一">
+    <meta name="description" content="最近在进行系统压测时，产生了mysql死锁的问题。本文就来分析产生死锁的原因。
+要分析产生死锁的原因，需要查看mysql的相关日志信息。由于show engine innodb status输出的信息较多，在屏幕中看不到所有的输出信息，因此先设置输出日志到文档中，然后执行日志输出：
+1mysql:pager cat - &amp;#62;&amp;#62;  ~/tzwang/mysqllog.txt&amp;#6530">
 <meta property="og:type" content="article">
-<meta property="og:title" content="https原理总结">
-<meta property="og:url" content="http://wangtianzhi.cn/2016/03/22/https-principle-analysis/index.html">
+<meta property="og:title" content="mysql死锁案例分析">
+<meta property="og:url" content="http://wangtianzhi.cn/2016/05/28/mysql-deadlock-example/index.html">
 <meta property="og:site_name" content="Tony's blog">
-<meta property="og:description" content="最近项目中要用到https，找运维人员配置相关参数时，被问到要配置单向认证还是双向认证，瞬间傻了，已是回来研究了下https的原理。
-https已经成为电商网站、银行、资金有关的系统的标配，特别是现在网络流量劫持增多、资金频繁被盗等场景下，重要网站https化势在必行。那么https原理是什么？单向认证、双向认证、为何要依赖于证书颁发机构、12306网站为何需要配置根证书？这些都是值得探讨的。
-一">
-<meta property="og:image" content="/img/https-principle-analysis/https-handle-process.png">
+<meta property="og:description" content="最近在进行系统压测时，产生了mysql死锁的问题。本文就来分析产生死锁的原因。
+要分析产生死锁的原因，需要查看mysql的相关日志信息。由于show engine innodb status输出的信息较多，在屏幕中看不到所有的输出信息，因此先设置输出日志到文档中，然后执行日志输出：
+1mysql:pager cat - &amp;#62;&amp;#62;  ~/tzwang/mysqllog.txt&amp;#6530">
+<meta property="og:image" content="/img/mysql-deadlock-example/explain-sql1-result.png">
+<meta property="og:image" content="/img/mysql-deadlock-example/explain-sql2-result.png">
+<meta property="og:image" content="/img/mysql-deadlock-example/index-lock-struct-diagram.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="https原理总结">
-<meta name="twitter:description" content="最近项目中要用到https，找运维人员配置相关参数时，被问到要配置单向认证还是双向认证，瞬间傻了，已是回来研究了下https的原理。
-https已经成为电商网站、银行、资金有关的系统的标配，特别是现在网络流量劫持增多、资金频繁被盗等场景下，重要网站https化势在必行。那么https原理是什么？单向认证、双向认证、为何要依赖于证书颁发机构、12306网站为何需要配置根证书？这些都是值得探讨的。
-一">
+<meta name="twitter:title" content="mysql死锁案例分析">
+<meta name="twitter:description" content="最近在进行系统压测时，产生了mysql死锁的问题。本文就来分析产生死锁的原因。
+要分析产生死锁的原因，需要查看mysql的相关日志信息。由于show engine innodb status输出的信息较多，在屏幕中看不到所有的输出信息，因此先设置输出日志到文档中，然后执行日志输出：
+1mysql:pager cat - &amp;#62;&amp;#62;  ~/tzwang/mysqllog.txt&amp;#6530">
 
     
     <link rel="alternative" href="/atom.xml" title="Tony&#39;s blog" type="application/atom+xml">
@@ -88,14 +90,14 @@ https已经成为电商网站、银行、资金有关的系统的标配，特别
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/03/22/https-principle-analysis/" title="https原理总结" itemprop="url">https原理总结</a>
+      <a href="/2016/05/28/mysql-deadlock-example/" title="mysql死锁案例分析" itemprop="url">mysql死锁案例分析</a>
   </h1>
   <p class="article-author">By
        
 		<a href="/about" title="Tony" target="_blank" itemprop="author">Tony</a>
 		
   <p class="article-time">
-    <time datetime="2016-03-22T12:20:40.000Z" itemprop="datePublished"> 发表于 2016-03-22</time>
+    <time datetime="2016-05-28T06:26:50.000Z" itemprop="datePublished"> 发表于 2016-05-28</time>
     
   </p>
 </header>
@@ -104,46 +106,28 @@ https已经成为电商网站、银行、资金有关的系统的标配，特别
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#一-https原理"><span class="toc-number">1.</span> <span class="toc-text">一.https原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#二-证书颁发机构"><span class="toc-number">2.</span> <span class="toc-text">二.证书颁发机构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#三-参考文献"><span class="toc-number">3.</span> <span class="toc-text">三.参考文献</span></a></li></ol>
+			
 		
 		</div>
 		
-		<p>最近项目中要用到https，找运维人员配置相关参数时，被问到要配置单向认证还是双向认证，瞬间傻了，已是回来研究了下https的原理。</p>
-<p>https已经成为电商网站、银行、资金有关的系统的标配，特别是现在网络流量劫持增多、资金频繁被盗等场景下，重要网站https化势在必行。那么https原理是什么？单向认证、双向认证、为何要依赖于证书颁发机构、12306网站为何需要配置根证书？这些都是值得探讨的。</p>
-<h3 id="一-https原理">一.https原理</h3><p>网景公司设计了SSL（Secure Sockets Layer）协议用于对HTTP协议传输的数据进行加密，从而就诞生了HTTPS。SSL目前的版本是3.0，被IETF（Internet Engineering Task Force）定义在RFC 6101中，之后IETF对SSL 3.0进行了升级，于是出现了TLS（Transport Layer Security） 1.0，定义在RFC 2246。实际上我们现在的HTTPS都是用的TLS协议，但是由于SSL出现的时间比较早，并且依旧被现在浏览器所支持。</p>
-<p><img src="/img/https-principle-analysis/https-handle-process.png" alt="https原理图-图片来自网络"></p>
-<p><strong>1. 客户端发起https请求</strong></p>
-<p>这个过程中客户端发送的信息会说明它支持的最高TLS协议版本、随机数、密码算法列表及压缩方法给服务端；</p>
-<p><strong>2. 服务端配置</strong></p>
-<p>采用HTTPS协议的服务器必须要有一套数字证书，可以自己制作，也可以向组织申请。区别就是自己颁发的证书需要客户端验证通过才可以继续访问，而使用受信任的公司申请的证书则不会弹出提示页面。</p>
-<p><strong>3. 服务器返回证书</strong></p>
-<p>发送给浏览器的证书包含公钥、证书的颁发机构、过期时间、域、签名等信息；</p>
-<p><strong>4. 验证证书</strong></p>
-<p>这部分工作是由客户端的TLS来完成的，客户端会验证证书是否有效，如服务器证书是否过期、发行服务器证书的CA是否可靠、发行CA的公钥能否正确解开服务器证书的发行CA的数字签名、服务器证书上的域名是否和服务器的实际域名相匹配等等，如果发现异常则会弹出一个警告框，提示证书存在问题，让用户选择是否继续。</p>
-<p>证书中会包含数字签名，该数字签名是加密过的，是用<strong>颁发机构的私钥</strong>对本证书的公钥、名称及其他信息做hash散列加密而生成的。客户端浏览器会一层层的去寻找颁发者的证书，直到自签名的<strong>根证书</strong>，然后通过相应的公钥再反过来验证下一级的数字签名的正确性，如果不能正常解密，则就是”发现异常”，说明该证书是伪造的。</p>
-<p><strong>5. 传送加密信息</strong></p>
-<p>如果上步证书验证通过，则生成一个<strong>随机值A</strong>作为后面通讯的密钥（对称加密），用证书的公钥对这个随机值加密，发送该加密后的随机值到服务器端，目的就是让服务端得到这个随机值，以后客户端和服务端的通信就可以通过这个随机值来进行加密解密了。</p>
-<p>如果服务器要求客户端的身份认证（在握手过程中为可选）即<strong>双向认证</strong>，客户端可以建立一个随机数然后对其进行数据签名，将这个含有签名的随机数和客户端自己的证书以及加密过的随机值A发送给服务器。</p>
-<p><strong>6. 服务端解密信息</strong></p>
-<p>服务端用证书的私钥解密后，得到了客户端传过来的随机值A，至此一个非对称加密的过程结束，看到TLS利用非对称加密实现了身份认证和密钥协商。</p>
-<p>如果服务器要求客户端的身份认证（双向认证），服务器必须检验客户端证书和签名随机数的合法性，具体的合法性验证包括：客户端证书是否过期，发行客户端证书的CA是否可靠，发行CA的公钥能否正确解开客户端证书的发行CA的数字签名，检查客户端证书是否在证书废止列表（CRL）中。如果合法性验证没有通过，通讯立刻中断；如果合法性验证通过，才获取随机值A,进行后续的步骤。</p>
-<p><strong>7. 传输加密后的信息</strong></p>
-<p>用上文客户端传来的密钥A加密客户端请求的内容，发给客户端。</p>
-<p><strong>8. 客户端解密信息</strong></p>
-<p>客户端用密钥A解密消息，获取了解密后的内容。整个过程第三方即使监听到了数据，也束手无策。（为什么不直接使用公钥和私钥进行通讯？因为非对称解密相当损耗CPU性能，https网站cpu损耗差不多90%的性能损耗都在非对称秘钥的解密上。全部内容都用非对称加密交流性能大大下降）</p>
-<p><strong>不管是双向认证还是单向认证，服务端都需要配置CA证书，单向认证不需要客户端拥有CA证书，双向认证客户端需要拥有CA证书。</strong></p>
-<p>一般Web应用都是采用单向认证的，原因很简单，用户数目广泛，且无需做在通讯层做用户身份验证，一般都在应用逻辑层来保证用户的合法登入。但如果是企业应用对接，情况就不一样，可能会要求对客户端（相对而言）做身份验证。这时就需要做双向认证。</p>
-<h3 id="二-证书颁发机构">二.证书颁发机构</h3><p>如果任何的证书客户端都信任，那么在上面的步骤1中，攻击者可以通过DNS劫持或IP伪造的方法使其访问到攻击者的服务器上，攻击者伪造一个同样域名的证书发给客户端，客户端验证了日期、域等都没错，从而骗过了客户端。</p>
-<p>为了抵御这种中间人攻击，证书需要由可信的证书颁发机构颁发，形成一个证书链（比如Gmail的证书链为：最底层为网域mail.google.com，上一层为Thawte SGC CA证书颁发机构，最顶层为很有名的VeriSign证书颁发机构）。那么，浏览器除了需要验证域和有效期外，还要检查证书链中的上级证书公钥是否有效，上级的上级证书公钥是否有效，直至根证书公钥为止。这样就可以有效避免中间人攻击了，因为<strong>根证书公钥都是预装在浏览器或操作系统</strong>中的，黑客如果不是暴力破解，无法得到根证书的私钥，如果黑客自己生成一个私钥，浏览器验证根证书公钥的时候发现无法通过浏览器中预装的公钥加密数据后使用这个私钥进行解密，从而判定这个公钥是无效的。这个方案也是现在https通讯通常的方案。</p>
-<p>那么，这个现在所有的浏览器正在使用的https通讯方案就无懈可击了吗？答案仍是否定的。我们可以看到，在后一个方案中，https的安全性需要在证书颁发机构公信力的强有力保障前提下才能发挥作用。如果证书颁发机构在没有验证黑客为mail.google.com的持有者的情况下，给黑客颁发了网域为mail.google.com的证书，那么黑客的中间人攻击又可以顺利实施。</p>
-<p>12306网站就是没有采用证书颁发机构颁发的证书，而是自己制作证书，因此需要在浏览器安装根证书，否则访问的时候就会提示‘此网站的安全证书有问题’，阻止用户继续访问。</p>
-<p>证书分为DV(Digital Verification)，OV(Organization Verification)和EV(Extended Verification)，其中EV证书最贵，可以在浏览器中看到绿色的就是EV证书。</p>
-<h3 id="三-参考文献">三.参考文献</h3><ol>
-<li><a href="http://blog.csdn.net/sean_cd/article/details/6966130" target="_blank" rel="external">https工作原理 </a></li>
-<li><a href="http://alvinhu.com/blog/2013/06/20/one-way-and-two-way-ssl-authentication/" target="_blank" rel="external">SSL的单向认证和双向认证</a></li>
-<li><a href="http://www.williamlong.info/archives/2058.html" target="_blank" rel="external">破解Google Gmail的https新思路</a></li>
-<li><a href="https://yq.aliyun.com/articles/2978" target="_blank" rel="external">淘宝全站HTTPS 百万页面改造技术细节大起底</a></li>
-</ol>
+		<p>最近在进行系统压测时，产生了mysql死锁的问题。本文就来分析产生死锁的原因。</p>
+<p>要分析产生死锁的原因，需要查看mysql的相关日志信息。由于show engine innodb status输出的信息较多，在屏幕中看不到所有的输出信息，因此先设置输出日志到文档中，然后执行日志输出：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysql:pager cat - &#62;&#62;  ~/tzwang/mysqllog.txt&#65307;&#10;mysql:show engine innodb status;</span><br></pre></td></tr></table></figure>
+<p>在产生死锁的事务中，有两条SQL(下文SQL经过脱敏处理)：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">语句1：</span><br><span class="line"><span class="operator"><span class="keyword">INSERT</span> tbl_log(buss_seq,oper_usr_nm,crt_usr <span class="keyword">SELECT</span> t.buss_seq, <span class="string">'tony'</span> <span class="keyword">as</span> oper_usr_nm,</span><br><span class="line"><span class="string">'tony'</span> <span class="keyword">as</span> crt_usr <span class="keyword">FROM</span> tbl_form_dtl t <span class="keyword">where</span> t.form_no = ? <span class="keyword">AND</span> t.buss_st= ? <span class="keyword">AND</span> t.itct_st= ?</span><br><span class="line"></span><br><span class="line">语句<span class="number">2</span>：</span><br><span class="line"><span class="keyword">update</span> tbl_form_dtl a <span class="keyword">set</span> a.BUSS_ST= <span class="string">'1'</span>,a.UPDATE_TM=<span class="keyword">now</span>(),a.UPDATE_USR = <span class="string">'tony'</span>  </span><br><span class="line"><span class="keyword">where</span> a.form_no= ?  <span class="keyword">AND</span> a.buss_st= ? <span class="keyword">AND</span> a.itct_st= ?</span></span><br></pre></td></tr></table></figure>
+<p>其中tbl_form_dtl表的主键为id,在<strong>form_no</strong>字段有二级索引。</p>
+<p>通过explain命令查看语句1，发现fromtbl_form_dtl t走了二级索引(form_no)，如下图所示：<br><img src="/img/mysql-deadlock-example/explain-sql1-result.png" alt="explain语句1结果"><br>由于事务隔离级别是可重复读级别，且索引是二级索引，所以上述<strong>语句1在锁住二级索引的行锁、GAP LOCK外，还会锁住对应的聚簇索引</strong>。</p>
+<p>通过explain命令查看语句2，发现语句2走的是聚簇索引,如下图所示：<br><img src="/img/mysql-deadlock-example/explain-sql2-result.png" alt="explain 语句2结果"><br>按理来说，语句2是可以走form_no字段的索引的，但是mysql会自动优化，由于该条sql的结果占表数据总量比较大，sql就将其优化成走<strong>聚簇索引</strong>（之所以优化成走聚簇索引，应该是因为二级索引在查询到后，还得再到聚簇索引中update数据）。经测试发现，当将表中的数据增大，使得语句2的覆盖范围占整个表的数据量比例较小时，就走了二级索引。</p>
+<p>分析mysql的日志:</p>
+<blockquote>
+<p>RECORD LOCKS space id 439657 <strong>page no 12</strong> n bits 120 index <code>PRIMARY</code> of table <code>databasename</code>.<code>tbl_form_dtl</code> trx id 54562223 <strong>lock_mode X waiting</strong></p>
+<p>RECORD LOCKS space id 439657 <strong>page no 12</strong> n bits 120 index <code>PRIMARY</code> of table <code>databasename</code>.<code>tbl_form_dtl</code> trx id 54562222 <strong>lock_mode X</strong></p>
+<p>RECORD LOCKS space id 439657 <strong>page no 2317</strong> n bits 120 index <code>PRIMARY</code> of table <code>databasename</code>.<code>tbl_form_dtl</code> trx id 54562222 <strong>lock_mode X waiting</strong></p>
+</blockquote>
+<p>产生死锁的原因：<br>事务54562222在执行语句2时，占有了page no =12的X锁，要获取page no=2317的X锁，而该锁已被事务54562223锁住；<br>事务54562223在执行语句1时，在锁住二级索引时，也获取了page no = 2317的S锁，然后执行语句2，要获取page no = 12的锁，而该锁已被事务54562222锁住。</p>
+<p>如下图所示，事务1在执行语句1时查找二级索引(form_no)，锁住绿色的部分，包括二级索引的Record lock和GAP LOCK，聚簇索引的Record Lock(因为聚簇索引是unique的，所以不用锁GAP LOCK)；此时事务2也在执行语句1，锁住了青色的部分，也包括Record和GAP LOCK,及聚簇索引的Record Lock。然后事务1和事务2各自执行语句2，由于语句2走了聚簇索引，所以要遍历聚簇索引；在mysql的innodb引擎中，由于where条件不是id，因此走聚簇索引需要锁住各个行，不过mysql有优化，在返回到服务器端后，mysql会根据where条件释放不必要的锁，不过在返回服务器端前还是要先加锁的。此时事务1需要等待id=4的锁，id=4已经被事务2锁住；而事务2需要等待id=1的锁，而id=1的锁已经被事务1锁住，因此就造成了死锁。<br><img src="/img/mysql-deadlock-example/index-lock-struct-diagram.png" alt="加锁索引图"></p>
+<p>mysql在检测到发生了死锁后，会释放一个事务的锁，另一个事务就能获得锁，此时就会报死锁异常，在mysql的相关日志中可以看到<code>LATEST DETECTED DEADLOCK</code>的相关记录，通过这部分记录就可以分析出死锁产生的原因。</p>
+<p>造成死锁的原因一般是加锁的顺序不一致导致的问题。数据库大神何登成的<a href="http://hedengcheng.com/?p=771" target="_blank" rel="external">mysql加锁处理分析</a>一文分析了mysql加锁的方式，以及死锁的一些场景，写的简单易懂，值得一看。</p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -151,13 +135,13 @@ https已经成为电商网站、银行、资金有关的系统的标配，特别
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/网络/">网络</a>
+  <a class="article-category-link" href="/categories/数据库/">数据库</a>
 </div>
 
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/https/">https</a><a href="/tags/网络/">网络</a><a href="/tags/证书/">证书</a>
+  <span></span> <a href="/tags/mysql/">mysql</a><a href="/tags/死锁/">死锁</a>
   </div>
 
 </div>
@@ -166,7 +150,7 @@ https已经成为电商网站、银行、资金有关的系统的标配，特别
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://wangtianzhi.cn/2016/03/22/https-principle-analysis/" data-title="https原理总结 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
+	  <div data-url="http://wangtianzhi.cn/2016/05/28/mysql-deadlock-example/" data-title="mysql死锁案例分析 | Tony&#39;s blog" data-tsina="wtz123" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -179,19 +163,11 @@ https已经成为电商网站、银行、资金有关的系统的标配，特别
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2016/04/12/AQS-of-concurrent/" title="AQS并发编程源码分析">
-  <strong>上一篇：</strong><br/>
-  <span>
-  AQS并发编程源码分析</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/03/05/springmvc-source-analysis/"  title="springMVC执行流程分析">
+<a href="/2016/04/12/AQS-of-concurrent/"  title="AQS并发编程源码分析">
  <strong>下一篇：</strong><br/> 
- <span>springMVC执行流程分析
+ <span>AQS并发编程源码分析
 </span>
 </a>
 </div>
@@ -200,7 +176,7 @@ https已经成为电商网站、银行、资金有关的系统的标配，特别
 
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2016/03/22/https-principle-analysis/" data-title="https原理总结" data-url="http://wangtianzhi.cn/2016/03/22/https-principle-analysis/"></div>
+	<div class="ds-thread" data-thread-key="2016/05/28/mysql-deadlock-example/" data-title="mysql死锁案例分析" data-url="http://wangtianzhi.cn/2016/05/28/mysql-deadlock-example/"></div>
 </section>
 
 
@@ -210,7 +186,7 @@ https已经成为电商网站、银行、资金有关的系统的标配，特别
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#一-https原理"><span class="toc-number">1.</span> <span class="toc-text">一.https原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#二-证书颁发机构"><span class="toc-number">2.</span> <span class="toc-text">二.证书颁发机构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#三-参考文献"><span class="toc-number">3.</span> <span class="toc-text">三.参考文献</span></a></li></ol>
+ 
  
   </div>
 
